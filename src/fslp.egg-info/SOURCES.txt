@@ -1,0 +1,9 @@
+LICENSE
+README.md
+pyproject.toml
+setup.py
+src/fslp.egg-info/PKG-INFO
+src/fslp.egg-info/SOURCES.txt
+src/fslp.egg-info/dependency_links.txt
+src/fslp.egg-info/requires.txt
+src/fslp.egg-info/top_level.txt

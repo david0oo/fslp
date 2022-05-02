@@ -1,0 +1,14 @@
+Metadata-Version: 2.1
+Name: fslp
+Version: 0.0.1
+Summary: A prototypical python implementation of FSLP
+Home-page: https://github.com/david0oo/fslp
+Author: David Kiessling
+Author-email: david.kiessling@kuleuven.be
+License: BSD
+Keywords: fslp
+Platform: UNKNOWN
+License-File: LICENSE
+
+UNKNOWN
+
