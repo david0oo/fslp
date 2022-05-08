@@ -1,5 +1,5 @@
 # fslp - feasible sequential linear programming: a prototypical implementation 
-A prototypical implementation of the recently proposed Feaaible Sequential Linear Programming (FSLP) algorithm.
+A prototypical implementation of the recently proposed Feasible Sequential Linear Programming (FSLP) algorithm.
 
 ## installation on linux
 In order to use the solver you need to install the following dependencies:
