@@ -60,8 +60,8 @@ init_dict['x0'] = x0
 init_dict['tr_rad0'] = 1
 
 opts = {}
-opts['qpsol'] = 'cplex'
-opts['qpsol_opts'] = {'verbose': False,
+opts['lpsol'] = 'cplex'
+opts['lpsol_opts'] = {'verbose': False,
                       'tol': 1e-9,
                       'qp_method': 2,
                       'warm_start': True,
