@@ -169,10 +169,26 @@ class FSLP_Method:
         else:
             self.verbose = True
 
+        if bool(opts) and 'gradient_correction' in opts:
+            self.gradient_correction = opts['gradient_correction']
+        else:
+            self.gradient_correction = False
+
         if bool(opts) and 'opt_check_slacks' in opts:
             self.opt_check_slacks = opts['opt_check_slacks']
         else:
             self.opt_check_slacks = False
+
+        if self.opt_check_slacks:
+            if bool(opts) and 'n_slacks_start' in opts:
+                self.n_slacks_start = opts['n_slacks_start']
+            else:
+                raise KeyError('Entry n_slacks_start not specified in opts!')
+
+            if bool(opts) and 'n_slacks_end' in opts:
+                self.n_slacks_end = opts['n_slacks_end']
+            else:
+                raise KeyError('Entry n_slacks_end not specified in opts!')
 
         self.lpsol_opts = {}
         if bool(opts) and 'lpsol' in opts and opts['lpsol'] != 'ipopt':
@@ -518,8 +534,8 @@ class FSLP_Method:
         This function checks if the slack variables are zero.
         """
         if self.opt_check_slacks:
-            s0 = self.x_k[0:6]
-            sf = self.x_k[-7:-1]
+            s0 = self.x_k[0:self.n_slacks_start]
+            sf = self.x_k[-(1+self.n_slacks_end):-1]
             s = cs.vertcat(s0, sf)
             if not self.slacks_zero and cs.norm_inf(s) < self.feas_tol:
                 self.slacks_zero_t_wall = timer() - self.lasttime
@@ -575,9 +591,19 @@ class FSLP_Method:
             self.lam_tmp_x = self.lam_p_x_k
 
             # 'Relative' version TR Methods book
-            d = self.g_tmp
-            lba_correction = self.lbg - d
-            uba_correction = self.ubg - d
+            # d = self.g_tmp
+            # lba_correction = self.lbg - d
+            # uba_correction = self.ubg - d
+
+            if self.gradient_correction:
+                grad_L_tmp = self.__eval_grad_lag(self.x_tmp, lam_p_g_tmp, lam_p_x_tmp)
+                print('Gradient of Lagrangian: ', cs.norm_inf(grad_L_tmp))
+                # Do the gradient correction, could also be + instead of -??
+                grad_f_correction = grad_L_tmp - self.A_k.T @ lam_p_g_tmp - lam_p_x_tmp#self.tr_scale_mat_k.T @ lam_p_x_tmp
+            else:
+                # Do just Zero-Order Iterations
+                grad_f_correction = self.val_grad_f_k
+
 
             lbp = cs.fmax(-self.tr_rad_k*self.tr_scale_mat_inv_k @
                           cs.DM.ones(self.nx, 1) - (self.x_tmp-self.x_k),
@@ -586,15 +612,15 @@ class FSLP_Method:
                           cs.DM.ones(self.nx, 1) - (self.x_tmp-self.x_k),
                           self.ubx - self.x_tmp)
 
-            lba_correction = self.lbg - d
-            uba_correction = self.ubg - d
+            lba_correction = self.lbg - self.g_tmp#- d
+            uba_correction = self.ubg - self.g_tmp#- d
             lb_var_correction = lbp
             ub_var_correction = ubp
 
             (_,
              p_tmp,
              lam_p_g_tmp,
-             lam_p_x_tmp) = self.solve_lp(g=self.val_grad_f_k,
+             lam_p_x_tmp) = self.solve_lp(g=grad_f_correction,
                                           a=self.A_k,
                                           lba=lba_correction,
                                           uba=uba_correction,
@@ -855,6 +881,8 @@ class FSLP_Method:
         self.inner_steps = []
         self.asymptotic_exactness = []
         self.list_iter = [self.x_k]
+        self.list_feas = [self.feasibility_measure(self.x_k, self.val_g_k)]
+        self.list_times = [0.0]
         self.list_mks = []
         self.list_grad_lag = []
 
@@ -884,8 +912,10 @@ class FSLP_Method:
                                              lbx=self.lb_var_k,
                                              ubx=self.ub_var_k)
             if not solve_success:
+                # print('Something went wrong in LP: ', self.lp_solver.stats()[
+                #       'solver_stats']['return_status'])
                 print('Something went wrong in LP: ', self.lp_solver.stats()[
-                      'solver_stats']['return_status'])
+                      'return_status'])
                 break
 
             self.p_k = self.__set_optimal_slack_step(self.x_k, self.p_k)
@@ -941,6 +971,8 @@ class FSLP_Method:
                 self.__prepare_lp_bounds_constraints()
                 self.accepted_counter += 1
                 self.__check_slacks_zero()
+                self.list_feas.append(self.feasibility_measure(self.x_k, self.val_g_k))
+                self.list_times.append(timer() - self.lasttime)
             else:
                 if self.verbose:
                     print('Rejected')
