@@ -846,6 +846,9 @@ class FSLP_Method:
         self.lam_x_k = self.lam_x0
         self.__eval_grad_jac()
 
+        if self.feasibility_measure(self.x_k, self.val_g_k) > self.feas_tol:
+            raise ValueError('Initial guess needs to be feasible!!')
+
         self.slacks_zero = False
         self.slacks_zero_iter = 0
         self.slacks_zero_n_eval_g = 0
