@@ -629,12 +629,15 @@ class FSLP_Method:
 
             p_tmp = self.__set_optimal_slack_step(self.x_tmp, p_tmp)
 
-            self.step_inf_norm = cs.fmax(cs.norm_inf(p_tmp),
-                                         cs.fmax(
-                                             cs.norm_inf(
-                                                 self.lam_tmp_g-self.lam_p_g_k),
-                                             cs.norm_inf(self.lam_tmp_x-
-                                                         self.lam_p_x_k)))
+            self.step_inf_norm = cs.norm_inf(self.tr_scale_mat_k @ p_tmp)
+
+            # Old version of step update. Beware that here multiplier term is always zero because of wrong update!
+            # self.step_inf_norm = cs.fmax(cs.norm_inf(p_tmp),
+            #                              cs.fmax(
+            #                                  cs.norm_inf(
+            #                                      self.lam_tmp_g-self.lam_p_g_k),
+            #                                  cs.norm_inf(self.lam_tmp_x-
+            #                                              self.lam_p_x_k)))
 
             self.x_tmp = self.x_tmp + p_tmp
             self.g_tmp = self.__eval_g(self.x_tmp)  # x_tmp = x_{tmp-1} + p_tmp
@@ -915,8 +918,6 @@ class FSLP_Method:
                                              lbx=self.lb_var_k,
                                              ubx=self.ub_var_k)
             if not solve_success:
-                # print('Something went wrong in LP: ', self.lp_solver.stats()[
-                #       'solver_stats']['return_status'])
                 print('Something went wrong in LP: ', self.lp_solver.stats()[
                       'return_status'])
                 break
@@ -929,13 +930,16 @@ class FSLP_Method:
                 self.stats['success'] = True
                 break
 
-            self.step_inf_norm = cs.fmax(
-                cs.norm_inf(self.p_k),
-                cs.fmax(
-                    cs.norm_inf(self.lam_tmp_g-self.lam_p_g_k),
-                    cs.norm_inf(self.lam_tmp_x-self.lam_p_x_k)
-                )
-            )
+            self.step_inf_norm = cs.norm_inf(self.tr_scale_mat_k @ self.p_k)
+
+            # Old version of step inf norm!
+            # self.step_inf_norm = cs.fmax(
+            #     cs.norm_inf(self.p_k),
+            #     cs.fmax(
+            #         cs.norm_inf(self.lam_tmp_g-self.lam_p_g_k),
+            #         cs.norm_inf(self.lam_tmp_x-self.lam_p_x_k)
+            #     )
+            # )
 
             self.prev_step_inf_norm = self.step_inf_norm
             (self.x_k_correction,
