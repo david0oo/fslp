@@ -567,6 +567,8 @@ class FSLP_Method:
 
         inner_iter = 0
         asymptotic_exactness = []
+        as_exac = cs.norm_2(
+                self.p_k - (self.x_tmp - self.x_k)) / cs.norm_2(self.p_k)
         self.prev_infeas = self.feasibility_measure(self.x_tmp, self.g_tmp)
         self.curr_infeas = self.feasibility_measure(self.x_tmp, self.g_tmp)
         feasibilities = [self.prev_infeas]
@@ -580,8 +582,12 @@ class FSLP_Method:
 
             if self.curr_infeas < self.feas_tol:
                 inner_iter = j
-                self.kappa_acceptance = True
-                break
+                if as_exac < 0.5:               
+                    self.kappa_acceptance = True
+                    break
+                else:
+                    self.kappa_acceptance = False
+                    break
             elif j > 0 and (self.curr_infeas > 1.0 or as_exac > 1.0):
                 self.kappa_acceptance = False
                 break
@@ -686,6 +692,7 @@ class FSLP_Method:
         self.inner_feas.append(feasibilities)
         self.inner_as_exac.append(asymptotic_exactness)
         self.inner_kappas.append(kappas)
+        self.asymptotic_exactness.append(as_exac)
 
         return self.x_tmp, lam_p_g_tmp, lam_p_x_tmp, inner_iter
 
@@ -715,7 +722,6 @@ class FSLP_Method:
         p_k_correction comes from the feasibility iterations
         """
         f_correction = self.f_fun(self.x_k_correction)
-        self.m_k = self.eval_m_k(self.p_k)
         self.list_mks.append(cs.fabs(self.m_k))
         if (self.val_f_k - f_correction) <= 0:
             if self.verbose:
@@ -923,6 +929,8 @@ class FSLP_Method:
                 break
 
             self.p_k = self.__set_optimal_slack_step(self.x_k, self.p_k)
+            self.m_k = self.eval_m_k(self.p_k)
+
             if cs.fabs(self.m_k) < self.optim_tol:
                 if self.verbose:
                     print('Optimal Point Found? Linear model is zero.')
@@ -947,18 +955,10 @@ class FSLP_Method:
                 self.lam_p_x_k,
                 self.feas_iter) = self.feasibility_iterations(self.p_k)
 
-            self.p_k_correction = self.x_k_correction-self.x_k
-
-            self.asymptotic_exactness.append(
-                cs.norm_2(self.p_k - self.p_k_correction)/cs.norm_2(self.p_k))
-            if self.verbose:
-                print('Asymptotic exactness: ', cs.norm_2(
-                    self.p_k - self.p_k_correction)/cs.norm_2(self.p_k))
-
-            if not self.kappa_acceptance or self.asymptotic_exactness[-1] > 0.5:
+            if not self.kappa_acceptance:
                 step_accepted = False
                 if self.verbose:
-                    print('rejected inner iterates or asymptotic exactness')
+                    print('Rejected inner iterates or asymptotic exactness')
                 self.tr_rad_k = 0.5*cs.norm_inf(self.tr_scale_mat_k @ self.p_k)
             else:
                 self.eval_trust_region_ratio()
@@ -972,7 +972,7 @@ class FSLP_Method:
                             self.x_k, self.lam_g_k, self.lam_x_k))).squeeze())
                 self.list_iter.append(self.x_k)
                 if self.verbose:
-                    print('Accepted')
+                    print('ACCEPTED')
                 self.__eval_grad_jac(step_accepted)
                 self.__prepare_lp_matrices()
                 self.__prepare_lp_bounds_constraints()
@@ -982,7 +982,7 @@ class FSLP_Method:
                 self.list_times.append(timer() - self.lasttime)
             else:
                 if self.verbose:
-                    print('Rejected')
+                    print('REJECTED')
 
             self.__prepare_lp_bounds_variables()
 
