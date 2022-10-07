@@ -817,7 +817,7 @@ class FSLP_Method:
                      lam_x=np.array(cs.norm_inf(self.lam_x_k)).squeeze(),
                      feas=self.feasibility_measure(self.x_k, self.val_g_k),
                      feas_it=self.feas_iter,
-                     tr_rad=np.array(self.tr_rad_k).squeeze(),
+                     tr_rad=np.array(self.tr_radii[-1]).squeeze(),
                      tr_ratio=np.array(self.rho_k).squeeze()))
 
     def solve(self, problem_dict, init_dict, opts={}, callback=None):
@@ -885,7 +885,7 @@ class FSLP_Method:
         self.feas_iter = -1
         self.m_k = -1
 
-        self.tr_radii = []
+        self.tr_radii = [self.tr_rad_k]
         self.inner_iters = []
         self.inner_feas = []
         self.inner_as_exac = []
@@ -978,7 +978,8 @@ class FSLP_Method:
                 self.__prepare_lp_bounds_constraints()
                 self.accepted_counter += 1
                 self.__check_slacks_zero()
-                self.list_feas.append(self.feasibility_measure(self.x_k, self.val_g_k))
+                self.list_feas.append(self.feasibility_measure(self.x_k,
+                                                               self.val_g_k))
                 self.list_times.append(timer() - self.lasttime)
             else:
                 if self.verbose:
