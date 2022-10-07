@@ -238,6 +238,16 @@ class FSLP_Method:
         self.lagrangian = self.f + self.lam_g.T @ self.g +\
             self.lam_x.T @ self.x
 
+        jit_opts = {
+            "jit":True,
+            "compiler":"shell",
+            "jit_temp_suffix":False,
+            "jit_options":{
+                "flags": ['-O3', '-fopenmp'], 
+                "verbose": True,
+            }
+        }
+
         self.f_fun = cs.Function('f_fun', [self.x], [self.f])
 
         self.grad_f_fun = cs.Function('grad_f_fun', [self.x], [self.grad_f])
@@ -716,7 +726,7 @@ class FSLP_Method:
         """
 
         beta = 1.0
-        m_stages = 9
+        m_stages = 5
         p_tmp = p
         # p_old = p
 
@@ -1250,10 +1260,7 @@ class FSLP_Method:
                                              lbx=self.lb_var_k,
                                              ubx=self.ub_var_k)
             if not solve_success:
-                # print('Something went wrong in LP: ', self.lp_solver.stats()[
-                #       'solver_stats']['return_status'])
-                print('Something went wrong in LP: ', self.lp_solver.stats()[
-                      'return_status'])
+                print('Something went wrong in LP: ', self.lp_solver.stats()['solver_stats']['return_status'])
                 break
 
             self.p_k = self.__set_optimal_slack_step(self.x_k, self.p_k)
@@ -1264,19 +1271,20 @@ class FSLP_Method:
                 self.stats['success'] = True
                 break
 
-            self.step_inf_norm = cs.fmax(
-                cs.norm_inf(self.p_k),
-                cs.fmax(
-                    cs.norm_inf(self.lam_tmp_g-self.lam_p_g_k),
-                    cs.norm_inf(self.lam_tmp_x-self.lam_p_x_k)
-                )
-            )
-
+            # self.step_inf_norm = cs.fmax(
+            #     cs.norm_inf(self.p_k),
+            #     cs.fmax(
+            #         cs.norm_inf(self.lam_tmp_g-self.lam_p_g_k),
+            #         cs.norm_inf(self.lam_tmp_x-self.lam_p_x_k)
+            #     )
+            # )
+            self.step_inf_norm = cs.norm_inf(self.p_k)
+                
             self.prev_step_inf_norm = self.step_inf_norm
             (self.x_k_correction,
                 self.lam_p_g_k,
                 self.lam_p_x_k,
-                self.feas_iter) = self.anderson_acceleration_stageM(self.p_k)#self.anderson_acceleration_stage1(self.p_k)#self.feasibility_iterations(self.p_k)
+                self.feas_iter) = self.anderson_acceleration_stageM(self.p_k)#self.anderson_acceleration_stage1(self.p_k)###self.feasibility_iterations(self.p_k)#
 
             self.p_k_correction = self.x_k_correction-self.x_k
 
