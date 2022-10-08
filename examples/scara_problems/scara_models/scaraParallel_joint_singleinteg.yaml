@@ -1,0 +1,12 @@
+equations:
+  inline:
+    ode:
+      q1: qd1   # handwritten but should be automatically generated based on .mbs
+      q3: qd3
+differential_states: 
+  - name: q1
+  - name: q3
+controls: 
+  - name: qd1
+  - name: qd3
+

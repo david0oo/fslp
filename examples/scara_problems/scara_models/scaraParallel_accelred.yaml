@@ -1,0 +1,13 @@
+equations:   # Robotran project 'scaraParallel' 
+  external:  # DAE formulation accelred 
+    type: casadi_serialized
+    file_name: scaraParallel_accelred.casadi
+differential_states:
+  - name: q1   # joint/position  - Joint_0 
+  - name: q3   # joint/position  - Joint_2 
+  - name: qd1   # joint/velocity  - Joint_0 
+  - name: qd3   # joint/velocity  - Joint_2 
+algebraic_states:
+controls:
+  - name: Qm1   # joint/force  - Joint_0 
+  - name: Qm3   # joint/force  - Joint_2 

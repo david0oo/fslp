@@ -103,7 +103,7 @@ class crane_problem:
         xdot_temp = cs.vertcat(l_dot, x_c_dot, theta_dot,
                                l_ddot, x_ddot, theta_ddot)
         ode = {'x': x_temp, 'p': cs.vertcat(u_temp, T), 'ode': T*xdot_temp}
-        opts = {'tf': 1}
+        opts = {'tf': 1}#, 'number_of_finite_elements':100}
         ode_integrator = cs.integrator('integrator', 'rk', ode, opts)
         return ode_integrator
 
@@ -229,6 +229,12 @@ class crane_problem:
         self.opti.subject_to(self.opti.bounded(0, Sf, cs.inf))
         self.opti.subject_to(self.opti.bounded(0.5, T, 10))
 
+        self.V_mats = cs.vertcat((1/cs.sqrt(10))*1e-2*U[0, :].T,
+            	                 1e-3*U[1,:].T,
+                                 cs.sqrt(10)*1e2*S0,
+                                 cs.sqrt(10)*1e2*Sf,
+                                 1/cs.sqrt(self.N)*T)
+
         objective = 1e5*cs.sum1(Sf) + 1e5*cs.sum1(S0) + T
 
         self.opti.minimize(objective)
@@ -319,10 +325,17 @@ class crane_problem:
         J = cs.jacobian(self.V_mats, self.opti.x)
         self.H_gn = 2*J.T @ J
 
-        lam_x = cs.MX.sym('lam_x', self.opti.x.shape[0])
-        lam_g = cs.MX.sym('lam_g', self.opti.g.shape[0])
+        # lam_x = cs.MX.sym('lam_x', self.opti.x.shape[0])
+        # lam_g = cs.MX.sym('lam_g', self.opti.g.shape[0])
 
-        H_gn_fun = cs.Function('gn_fun', [self.opti.x, lam_g, lam_x], [self.H_gn])
+        # H_gn_fun = cs.Function('gn_fun', [self.opti.x, lam_g, lam_x], [self.H_gn])
+
+        sigma = cs.MX.sym('sigma')
+
+        H_gn_fun = cs.Function('gn_fun', [self.opti.x,
+                                          self.opti.p,
+                                          sigma,
+                                          self.opti.lam_g], [sigma * self.H_gn])
 
         return H_gn_fun
 
@@ -542,7 +555,7 @@ class crane_problem:
 
         return (l_sol, xc_sol, theta_sol, p_load)
 
-    def plot(self, x_sol, x_sol_ipopt):
+    def plot(self, list_X, list_labels):
         """
         Plot the optimal trajectory of the crane load.
         
@@ -550,19 +563,18 @@ class crane_problem:
             x_sol (Casadi DM vector): optimal solution calculated by FSLP
             x_sol_ipopt (Casadi DM vector): optimal solution calculated by IPOPT
         """
-        (_, _, _, p_load) = self.get_particular_states(x_sol)
-        (_, _, _, p_load_ipopt) = self.get_particular_states(x_sol_ipopt)
-
         _, ax = plt.subplots()
         ax.set_aspect('equal')
         rect = Rectangle((0.1, -2), 0.1, 1.3, linewidth=1,
                          edgecolor='r', facecolor='none')
         ax.add_patch(rect)
-        ax.plot(p_load[:, 0], p_load[:, 1], label='FP-SQP opt')
-        ax.plot(p_load_ipopt[:, 0], p_load_ipopt[:, 1], label='IPOPT')
+        for i in range(len(list_X)):
+            (_, _, _, p_load) = self.get_particular_states(list_X[i])
+            ax.plot(p_load[:, 0], p_load[:, 1], label=list_labels[i])
         ax.set_ylim((-1, -0.5))
         plt.legend(loc='upper right')
-        plt.xlabel('x1')
-        plt.ylabel('x2')
+        plt.xlabel('$x_1$-axis')
+        plt.ylabel('$x_2$-axis')
         plt.title('Overhead Crane, P2P Motion with obstacle')
         plt.show()
+    

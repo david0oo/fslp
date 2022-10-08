@@ -1,0 +1,1 @@
+in this folder, all information about the scara model are stored. These casadi functions are generated in a separate repo. 

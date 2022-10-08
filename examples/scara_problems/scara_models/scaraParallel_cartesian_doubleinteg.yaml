@@ -1,0 +1,16 @@
+equations:
+  inline:
+    ode:
+      xee: xeed   # ee stands for end-effector
+      yee: yeed
+      xeed: xeedd   # ee stands for end-effector
+      yeed: yeedd
+differential_states: 
+  - name: xee
+  - name: yee
+  - name: xeed
+  - name: yeed
+controls: 
+  - name: xeedd
+  - name: yeedd
+
