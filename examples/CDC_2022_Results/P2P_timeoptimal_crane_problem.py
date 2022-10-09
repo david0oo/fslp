@@ -318,17 +318,28 @@ class crane_problem:
 
         return (x, f, g, lbg, ubg, lbx, ubx, x0)
 
-    def create_gn_hessian(self):
+    def create_gn_hessian_python(self):
         """
         Creates the Gauss-Newton Hessian matrix and returns it as a function.
         """
         J = cs.jacobian(self.V_mats, self.opti.x)
         self.H_gn = 2*J.T @ J
 
-        # lam_x = cs.MX.sym('lam_x', self.opti.x.shape[0])
+        lam_x = cs.MX.sym('lam_x', self.opti.x.shape[0])
         # lam_g = cs.MX.sym('lam_g', self.opti.g.shape[0])
 
-        # H_gn_fun = cs.Function('gn_fun', [self.opti.x, lam_g, lam_x], [self.H_gn])
+        H_gn_fun = cs.Function('gn_fun', [self.opti.x,
+                                          self.opti.lam_g,
+                                          lam_x], [self.H_gn])
+
+        return H_gn_fun
+
+    def create_gn_hessian_cpp(self):
+        """
+        Creates the Gauss-Newton Hessian matrix and returns it as a function.
+        """
+        J = cs.jacobian(self.V_mats, self.opti.x)
+        self.H_gn = 2*J.T @ J
 
         sigma = cs.MX.sym('sigma')
 
@@ -340,7 +351,7 @@ class crane_problem:
         return H_gn_fun
 
 
-    def create_scaling_matrices(self, states=True, controls=True,
+    def create_scaling_matrices_python(self, states=True, controls=True,
             time=True, sep_hyp=False, slack0=False, slack_f=False):
         """
         Creates the scaling matrices and its inverse for the feasible SQP
@@ -420,6 +431,76 @@ class crane_problem:
         tr_scale_mat_inv = cs.diag(tr_scale_mat_inv_vec)
 
         return tr_scale_mat, tr_scale_mat_inv
+
+    def create_scaling_matrices_cpp(self, states=True, controls=True,
+            time=True, sep_hyp=False, slack0=False, slack_f=False):
+        """
+        Creates the scaling matrices and its inverse for the feasible SQP
+        solver.
+        As default we set a trust-region around the states, controls, and time.
+        For additional trust-regions set the bools to TRUE.
+
+        Args:
+            states (bool, optional): Are states in trust-region? Defaults to True.
+            controls (bool, optional): Are controls in trust-region?. Defaults to True.
+            time (bool, optional): Is time in trust-region?. Defaults to True.
+            sep_hyp (bool, optional): Are separating hyperplane variables in 
+            trust-region? Defaults to False.
+            slack0 (bool, optional): Is slack variable of initial condition 
+            in trust-region? Defaults to False.
+            slack_f (bool, optional): Is slack variable of terminal condition 
+            in trust-region? Defaults to False.
+
+        Returns:
+            Casadi DM vectors: First entry of tuple is scaling matrix of the 
+            decision variables. Second entry is the inverse of the scaling 
+            matrix.
+        """
+        # Define the one or zero vectors, if variable is in trust-region or
+        # not
+        if states:
+            vec_states = np.ones(self.n_x)
+        else:
+            vec_states = np.zeros(self.n_x)
+
+        if controls:
+            vec_controls = np.ones(self.n_u)
+        else:
+            vec_controls = np.zeros(self.n_u)
+
+        if time:
+            vec_time = np.ones(self.n_t)
+        else:
+            vec_time = np.zeros(self.n_t)
+
+        if sep_hyp:
+            vec_sep_hyp = np.ones(self.n_sh)
+        else:
+            vec_sep_hyp = np.zeros(self.n_sh)
+
+        if slack0:
+            vec_slack0 = np.ones(self.n_s0)
+        else:
+            vec_slack0 = np.zeros(self.n_s0)
+
+        if slack_f:
+            vec_slack_f = np.ones(self.n_sf)
+        else:
+            vec_slack_f = np.zeros(self.n_sf)
+
+        # Create the trust-region scaling matrix
+        list_tr_scale_mat_vec = []
+        list_tr_scale_mat_vec.append(vec_slack0)
+        for k in range(self.N+1):
+            list_tr_scale_mat_vec.append(vec_states)
+            if k < self.N:
+                list_tr_scale_mat_vec.append(vec_controls)
+                list_tr_scale_mat_vec.append(vec_sep_hyp)
+        list_tr_scale_mat_vec.append(vec_slack_f)
+        list_tr_scale_mat_vec.append(vec_time)
+        tr_scale_mat_vec = np.hstack(list_tr_scale_mat_vec)
+
+        return tr_scale_mat_vec
 
     def get_state_sol(self, sol):
         """
