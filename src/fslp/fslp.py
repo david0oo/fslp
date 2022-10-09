@@ -16,7 +16,8 @@ class FSLP_Method:
         The constructor. More variables are set and initialized in specific
         functions below.
         """
-        self.lp_solver = None
+        self.subproblem_solver = None
+        self.solver_type = 'SLP'
 
     def __initialize_parameters(self, problem_dict, init_dict, opts={}):
         """
@@ -190,16 +191,24 @@ class FSLP_Method:
             else:
                 raise KeyError('Entry n_slacks_end not specified in opts!')
 
-        self.lpsol_opts = {}
-        if bool(opts) and 'lpsol' in opts and opts['lpsol'] != 'ipopt':
-            self.lpsol = opts['lpsol']
+        if bool(opts) and 'solver_type' in opts:
+            if not opts['solver_type'] in ['SLP', 'SQP']:
+                raise KeyError('The only allowed types are SLP or SQP!!')
+            self.solver_type = opts['solver_type']
         else:
-            self.lpsol = 'nlpsol'
-            self.lpsol_opts['nlpsol'] = 'ipopt'
+            self.solver_type = 'SLP'
 
-        if bool(opts) and 'lpsol_opts' in opts\
-                and opts['lpsol'] != 'ipopt':
-            self.lpsol_opts.update(opts['lpsol_opts'])
+
+        self.subproblem_sol_opts = {}
+        if bool(opts) and 'subproblem_sol' in opts and opts['subproblem_sol'] != 'ipopt':
+            self.subproblem_sol = opts['subproblem_sol']
+        else:
+            self.subproblem_sol = 'nlpsol'
+            self.subproblem_sol_opts['nlpsol'] = 'ipopt'
+
+        if bool(opts) and 'subproblem_sol_opts' in opts\
+                and opts['subproblem_sol'] != 'ipopt':
+            self.subproblem_sol_opts.update(opts['subproblem_sol_opts'])
         else:
             opts = {
                 'ipopt': {'print_level': 0,
@@ -215,14 +224,14 @@ class FSLP_Method:
                           'bound_relax_factor': 0},
                 'print_time': False}
             # Needs to be nlpsol_options
-            self.lpsol_opts['nlpsol_options'] = opts
+            self.subproblem_sol_opts['nlpsol_options'] = opts
 
         if bool(opts) and 'error_on_fail' in opts:
-            self.lpsol_opts['error_on_fail'] = opts['error_on_fail']
+            self.subproblem_sol_opts['error_on_fail'] = opts['error_on_fail']
         else:
-            self.lpsol_opts['error_on_fail'] = False
+            self.subproblem_sol_opts['error_on_fail'] = False
 
-    def __initialize_functions(self):
+    def __initialize_functions(self, opts={}):
         """
         This function initializes the Casadi functions needed to evaluate
         the objective, constraints, gradients, jacobians, Hessians...
@@ -250,6 +259,15 @@ class FSLP_Method:
                                         [self.x, self.lam_g, self.lam_x],
                                         [cs.gradient(self.lagrangian,
                                                      self.x)])
+                                                    
+        if self.solver_type == 'SQP' and bool(opts) and 'hess_lag_fun' in opts:
+            self.hess_lag_fun = opts['hess_lag_fun']
+        else:
+            self.hess_lag_fun = cs.Function('hess_lag_fun',
+                                        [self.x, self.lam_g, self.lam_x],
+                                        [cs.hessian(
+                                            self.lagrangian,
+                                            self.x)[0]])
 
     def __initialize_stats(self):
         """
@@ -266,6 +284,8 @@ class FSLP_Method:
         self.stats['n_eval_jac_g'] = 0
         # number of Gradient of Lagrangian evaluations
         self.stats['n_eval_grad_lag'] = 0
+        # number of Hessian of Lagrangian evaluations
+        self.stats['n_eval_hess_l'] = 0
         # number of outer iterations
         self.stats['iter_count'] = 0
         # number of total inner iterations
@@ -292,18 +312,27 @@ class FSLP_Method:
                         cs.fmax(0, self.lbx-x),
                         cs.fmax(0, x-self.ubx)))).squeeze()
 
-    def __create_lp_solver(self):
+    def __create_subproblem_solver(self):
         """
         This function creates an LP-solver object with the casadi conic 
         operation.
         """
-        
-        lp_struct = {'a': self.A_k.sparsity()}
+        if self.solver_type == 'SQP':
+            B_placeholder = self.hess_lag_fun(self.x0, self.lam_g0, self.lam_x0)
 
-        self.lp_solver = cs.conic("lp_solver",
-                                    self.lpsol,
-                                    lp_struct,
-                                    self.lpsol_opts)
+            qp_struct = {   'h': B_placeholder.sparsity(),
+                            'a': self.A_k.sparsity()}
+            self.subproblem_solver = cs.conic(  "qp_solver",
+                                                self.subproblem_sol,
+                                                qp_struct,
+                                                self.subproblem_sol_opts)
+        else:
+            lp_struct = {'a': self.A_k.sparsity()}
+
+            self.subproblem_solver = cs.conic(  "lp_solver",
+                                                self.subproblem_sol,
+                                                lp_struct,
+                                                self.subproblem_sol_opts)
 
     def solve_lp(self,
                  g=None,
@@ -335,12 +364,12 @@ class FSLP_Method:
             the third entry are the lagrange multipliers for the new
             search direction
         """
-        res = self.lp_solver(g=g,
-                                a=a,
-                                lba=lba,
-                                uba=uba,
-                                lbx=lbx,
-                                ubx=ubx)
+        res = self.subproblem_solver(   g=g,
+                                        a=a,
+                                        lba=lba,
+                                        uba=uba,
+                                        lbx=lbx,
+                                        ubx=ubx)
 
         # Keep track that bounds of QP are guaranteed. If not because of a
         # tolerance, make them exact.
@@ -360,9 +389,109 @@ class FSLP_Method:
         lam_p_g = res['lam_a']
         lam_p_x = res['lam_x']
 
-        solve_success = self.lp_solver.stats()['success']
+        solve_success = self.subproblem_solver.stats()['success']
 
         return (solve_success, p, lam_p_g, lam_p_x)
+
+    def solve_qp(self,
+                 h=None,
+                 g=None,
+                 a=None,
+                 lba=None,
+                 uba=None,
+                 lbx=None,
+                 ubx=None):
+        """
+        This function solves the qp subproblem. Additionally some processing of
+        the result is done and the statistics are saved. The input signature is
+        the same as for a casadi qp solver.
+        Input:
+        h       Matrix in QP objective
+        g       Vector in QP objective
+        a       Matrix for QP constraints
+        lba     lower bounds of constraints
+        uba     upper bounds of constraints
+        lbx     lower bounds of variables
+        ubx     upper bounds of variables
+
+        Return:
+        solve_success   Bool, indicating if qp was succesfully solved
+        p_scale         Casadi DM vector, the new search direction
+        lam_p_scale     Casadi DM vector, the lagrange multipliers for the new
+                        search direction
+        """
+        res = self.subproblem_solver(   h=h,
+                                        g=g,
+                                        a=a,
+                                        lba=lba,
+                                        uba=uba,
+                                        lbx=lbx,
+                                        ubx=ubx)
+        
+        # Save some statistics
+
+        # Keep track that bounds of QP are guaranteed. If not because of a 
+        # tolerance, make them exact.
+
+        p_tmp = res['x']
+        # Get indeces where variables are violated
+        lower_p = list(np.nonzero(np.array(p_tmp < lbx).squeeze())[0])
+        upper_p = list(np.nonzero(np.array(p_tmp > ubx).squeeze())[0])
+
+        # Resolve the 'violation' in the search direction
+        if bool(lower_p):
+            p_tmp[lower_p] = lbx[lower_p]
+        if bool(upper_p):
+            p_tmp[upper_p] = ubx[upper_p]
+
+        # Process the new search directions and multipliers w/o slacks
+        p = p_tmp
+        lam_p_g = res['lam_a']
+        lam_p_x = res['lam_x']
+        
+        solve_success = self.subproblem_solver.stats()['success']
+
+        return (solve_success, p, lam_p_g, lam_p_x)
+
+    def solve_subproblem(   self,
+                            g=None,
+                            lba=None,
+                            uba=None,
+                            lbx=None,
+                            ubx=None):
+        """
+        This function solves the qp subproblem. Additionally some processing of
+        the result is done and the statistics are saved. The input signature is
+        the same as for a casadi qp solver.
+        Input:
+        g       Vector in QP objective
+        lba     lower bounds of constraints
+        uba     upper bounds of constraints
+        lbx     lower bounds of variables
+        ubx     upper bounds of variables
+
+        Return:
+        solve_success   Bool, indicating if subproblem was succesfully solved
+        p_scale         Casadi DM vector, the new search direction
+        lam_p_scale     Casadi DM vector, the lagrange multipliers for the new
+                        search direction
+        """
+        if self.solver_type == 'SQP':
+            return self.solve_qp(   h=self.H_k,
+                                    g=g,
+                                    a=self.A_k,
+                                    lba=lba,
+                                    uba=uba,
+                                    lbx=lbx,
+                                    ubx=ubx)
+        else:
+            return self.solve_lp(   g=g,
+                                    a=self.A_k,
+                                    lba=lba,
+                                    uba=uba,
+                                    lbx=lbx,
+                                    ubx=ubx)
+        
 
     def __set_optimal_slack_step(self, x, p):
         """
@@ -418,6 +547,10 @@ class FSLP_Method:
             self.val_g_k = self.__eval_g(self.x_k)
         self.val_grad_f_k = self.__eval_grad_f(self.x_k)
         self.val_jac_g_k = self.__eval_jac_g(self.x_k)
+        if self.solver_type == 'SQP':
+            self.hess_lag_k = self.__eval_hess_l(self.x_k,
+                                                 self.lam_g_k,
+                                                 self.lam_x_k)
 
     def __eval_f(self, x):
         """
@@ -490,7 +623,15 @@ class FSLP_Method:
         self.stats['n_eval_grad_lag'] += 1
         return self.grad_lag_fun(x, lam_g, lam_x)
 
-    def __prepare_lp_matrices(self):
+    def __eval_hess_l(self, x, lam_g, lam_x):
+        """
+        Evaluates the Hessian of Lagrangian. And stores the statistics 
+        of it.
+        """
+        self.stats['n_eval_hess_l'] += 1
+        return self.hess_lag_fun(x, lam_g, lam_x)
+
+    def __prepare_subproblem_matrices(self):
         """
         Prepares the objective vector g and the constraint matrix A for the LP.
         I.e., min_{x}   g_k.T x
@@ -499,8 +640,10 @@ class FSLP_Method:
         """
         self.A_k = self.val_jac_g_k
         self.g_k = self.val_grad_f_k
+        if self.solver_type == 'SQP':
+            self.H_k = self.hess_lag_k
 
-    def __prepare_lp_bounds_constraints(self):
+    def __prepare_subproblem_bounds_constraints(self):
         """
         Prepare the bounds for the constraints in the LP.
         I.e., min_{x}   g_k.T x
@@ -512,7 +655,7 @@ class FSLP_Method:
         self.lba_k = cs.vertcat(self.lbg - self.val_g_k)
         self.uba_k = cs.vertcat(self.ubg - self.val_g_k)
 
-    def __prepare_lp_bounds_variables(self):
+    def __prepare_subproblem_bounds_variables(self):
         """
         Prepare the bounds for the variables in the LP.
         I.e., min_{x}   g_k.T x
@@ -608,7 +751,10 @@ class FSLP_Method:
                 grad_f_correction = grad_L_tmp - self.A_k.T @ lam_p_g_tmp - lam_p_x_tmp#self.tr_scale_mat_k.T @ lam_p_x_tmp
             else:
                 # Do just Zero-Order Iterations
-                grad_f_correction = self.val_grad_f_k
+                if self.solver_type == 'SQP':
+                    grad_f_correction = self.val_grad_f_k + self.H_k @ (self.x_tmp - self.x_k)
+                else:
+                    grad_f_correction = self.val_grad_f_k
 
 
             lbp = cs.fmax(-self.tr_rad_k*self.tr_scale_mat_inv_k @
@@ -618,20 +764,19 @@ class FSLP_Method:
                           cs.DM.ones(self.nx, 1) - (self.x_tmp-self.x_k),
                           self.ubx - self.x_tmp)
 
-            lba_correction = self.lbg - self.g_tmp#- d
-            uba_correction = self.ubg - self.g_tmp#- d
+            lba_correction = self.lbg - self.g_tmp
+            uba_correction = self.ubg - self.g_tmp
             lb_var_correction = lbp
             ub_var_correction = ubp
 
             (_,
-             p_tmp,
-             lam_p_g_tmp,
-             lam_p_x_tmp) = self.solve_lp(g=grad_f_correction,
-                                          a=self.A_k,
-                                          lba=lba_correction,
-                                          uba=uba_correction,
-                                          lbx=lb_var_correction,
-                                          ubx=ub_var_correction)
+            p_tmp,
+            lam_p_g_tmp,
+            lam_p_x_tmp) = self.solve_subproblem(   g=grad_f_correction,
+                                                    lba=lba_correction,
+                                                    uba=uba_correction,
+                                                    lbx=lb_var_correction,
+                                                    ubx=ub_var_correction)
 
             p_tmp = self.__set_optimal_slack_step(self.x_tmp, p_tmp)
 
@@ -698,6 +843,12 @@ class FSLP_Method:
 
     def eval_m_k(self, p):
         """
+        In case of SQP:
+        Evaluates the quadratic model of the objective function, i.e.,
+        m_k(x_k; p) = grad_f_k.T @ p + p.T @ H_k @ p
+        H_k denotes the Hessian Approximation
+
+        In case of SLP:
         Evaluates the linear model of the objective function, i.e.,
         m_k(x_k; p) = grad_f_k.T @ p. This model is used in the termination
         criterion.
@@ -709,7 +860,10 @@ class FSLP_Method:
         Returns:
             double: the value of the linear model at the given direction p.
         """
-        return self.val_grad_f_k.T @ p
+        if self.solver_type == 'SQP':
+            return self.val_grad_f_k.T @ p + 0.5 * p.T @ self.H_k @ p
+        else:
+            return self.val_grad_f_k.T @ p
 
     def eval_trust_region_ratio(self):
         """
@@ -847,7 +1001,7 @@ class FSLP_Method:
         self.lasttime = timer()
 
         self.__initialize_parameters(problem_dict, init_dict, opts)
-        self.__initialize_functions()
+        self.__initialize_functions(opts)
         self.__initialize_stats()
 
         self.x_k = self.x0
@@ -876,11 +1030,11 @@ class FSLP_Method:
         self.inner_iter_limit_count = 0
 
         self.tr_rad_k = self.tr_rad0
-        self.__prepare_lp_matrices()
-        self.__prepare_lp_bounds_variables()
-        self.__prepare_lp_bounds_constraints()
+        self.__prepare_subproblem_matrices()
+        self.__prepare_subproblem_bounds_variables()
+        self.__prepare_subproblem_bounds_constraints()
 
-        self.__create_lp_solver()
+        self.__create_subproblem_solver()
 
         self.feas_iter = -1
         self.m_k = -1
@@ -914,18 +1068,25 @@ class FSLP_Method:
 
             self.tr_radii.append(self.tr_rad_k)
 
+            
             (solve_success,
-             self.p_k,
-             self.lam_p_g_k,
-             self.lam_p_x_k) = self.solve_lp(g=self.g_k,
-                                             a=self.A_k,
-                                             lba=self.lba_k,
-                                             uba=self.uba_k,
-                                             lbx=self.lb_var_k,
-                                             ubx=self.ub_var_k)
+            self.p_k,
+            self.lam_p_g_k,
+            self.lam_p_x_k) = self.solve_subproblem(    g=self.g_k,
+                                                        lba=self.lba_k,
+                                                        uba=self.uba_k,
+                                                        lbx=self.lb_var_k,
+                                                        ubx=self.ub_var_k)
+
+            
             if not solve_success:
-                print('Something went wrong in LP: ', self.lp_solver.stats()[
-                      'return_status'])
+                if self.solver_type == 'SQP':
+                    # TODO: correct this
+                    print('Something went wrong in QP: ', self.subproblem_solver.stats()[
+                        'return_status'])
+                else:
+                    print('Something went wrong in LP: ', self.subproblem_solver.stats()[
+                        'return_status'])
                 break
 
             self.p_k = self.__set_optimal_slack_step(self.x_k, self.p_k)
@@ -974,8 +1135,8 @@ class FSLP_Method:
                 if self.verbose:
                     print('ACCEPTED')
                 self.__eval_grad_jac(step_accepted)
-                self.__prepare_lp_matrices()
-                self.__prepare_lp_bounds_constraints()
+                self.__prepare_subproblem_matrices()
+                self.__prepare_subproblem_bounds_constraints()
                 self.accepted_counter += 1
                 self.__check_slacks_zero()
                 self.list_feas.append(self.feasibility_measure(self.x_k,
@@ -985,7 +1146,7 @@ class FSLP_Method:
                 if self.verbose:
                     print('REJECTED')
 
-            self.__prepare_lp_bounds_variables()
+            self.__prepare_subproblem_bounds_variables()
 
         self.stats['t_wall'] = timer() - self.lasttime
         if hasattr(self, 'slacks_zero_t_wall'):
