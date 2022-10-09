@@ -198,6 +198,11 @@ class FSLP_Method:
         else:
             self.solver_type = 'SLP'
 
+        if self.solver_type == 'SQP':
+            print("SOLVING PROBLEM WITH SQP!\n")
+        else:
+            print("SOLVING PROBLEM WITH SLP!\n")
+
 
         self.subproblem_sol_opts = {}
         if bool(opts) and 'subproblem_sol' in opts and opts['subproblem_sol'] != 'ipopt':
