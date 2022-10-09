@@ -3,7 +3,7 @@ import casadi as cs
 import os
 import sys
 import json
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, test
 from matplotlib.patches import Rectangle
 import numpy as np
 from src.fslp import fslp
@@ -72,22 +72,22 @@ if solve_str == 'ipopt':
         opts = json.loads(file.read())
 elif solve_str == 'qpoases':
     opts = {}
-    opts['lpsol'] = 'qpoases'
+    opts['subproblem_sol'] = 'qpoases'
     # # # opts['lpsol_opts'] = {'nWSR':5000, "schur":True, "printLevel": "none", "enableEqualities":False, "linsol_plugin":"ma27", "max_schur":200}
     # opts['lpsol_opts'] = {'nWSR':10000, "sparse":True, 'hessian_type': 'semidef'}
     # opts['lpsol_opts'] = {'nWSR':10000, "printLevel": "none", "sparse":True, 'hessian_type': 'semidef'}
 elif solve_str == 'clp':
     opts = {}
-    opts['lpsol'] = 'clp'
-    opts['lpsol_opts'] = {'verbose':False, 'SolveType':'useDual', 'clp':{'PrimalTolerance':1e-12, 'DualTolerance':1e-10}}
+    opts['subproblem_sol'] = 'clp'
+    opts['subproblem_sol_opts'] = {'verbose':False, 'SolveType':'useDual', 'clp':{'PrimalTolerance':1e-12, 'DualTolerance':1e-10}}
 elif solve_str == 'gurobi':
     opts = {}
-    opts['lpsol'] = 'gurobi'
-    opts['lpsol_opts'] = {'verbose':False, 'clp':{'PrimalTolerance':1e-12, 'DualTolerance':1e-10}}
+    opts['subproblem_sol'] = 'gurobi'
+    opts['subproblem_sol_opts'] = {'verbose':False, 'clp':{'PrimalTolerance':1e-12, 'DualTolerance':1e-10}}
 elif solve_str == 'cplex':
     opts = {}
-    opts['lpsol'] = 'cplex'
-    opts['lpsol_opts'] = {'verbose':False, 'tol':1e-9, 'qp_method':2, 'warm_start':True, 'dep_check':2, 'cplex':{'CPXPARAM_Simplex_Display':0, 'CPXPARAM_ScreenOutput':0}}#, 'cplex':{'tol':1e-12}}
+    opts['subproblem_sol'] = 'cplex'
+    opts['subproblem_sol_opts'] = {'verbose':False, 'tol':1e-9, 'qp_method':2, 'warm_start':True, 'dep_check':2, 'cplex':{'CPXPARAM_Simplex_Display':0, 'CPXPARAM_ScreenOutput':0}}#, 'cplex':{'tol':1e-12}}
 else:
     raise ValueError('Wrong string given!')
 
@@ -102,6 +102,7 @@ opts['tr_tol'] = 1e-8
 opts['opt_check_slacks'] = True
 # opts['verbose'] = False
 opts['testproblem_obj'] = testproblem
+opts['hess_lag_fun'] = testproblem.create_gn_hessian()
 opts['n_slacks_start'] = 6
 opts['n_slacks_end'] = 6
 # opts['gradient_correction'] = True
