@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 import copy
 
+cs.DM.set_precision(16)
 
 class crane_problem:
 
