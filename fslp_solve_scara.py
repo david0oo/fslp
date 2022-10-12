@@ -106,18 +106,18 @@ mycallback = MyCallback('mycallback', x.shape[0], g.shape[0], 0)
 opts_ipopt['iteration_callback'] = mycallback
 opts_sqpmethod = {'convexify_strategy': 'regularize', 'max_iter': 200}
 ipopt_solver = cs.nlpsol('ipopt_solver', 'ipopt', nlp, opts_ipopt)
-sol = ipopt_solver(x0=x0, lbx=lbx, ubx=ubx, lbg=lbg, ubg=ubg)
-# # The optimal solution of the NLP..This solution should be found
-x_opt_ipopt = sol['x']
-lam_g_opt_ipopt = sol['lam_g']
+# sol = ipopt_solver(x0=x0, lbx=lbx, ubx=ubx, lbg=lbg, ubg=ubg)
+# # # The optimal solution of the NLP..This solution should be found
+# x_opt_ipopt = sol['x']
+# lam_g_opt_ipopt = sol['lam_g']
 
-start_time = mycallback.times[0]
-ipopt_times = [i - start_time for i in mycallback.times]
+# start_time = mycallback.times[0]
+# ipopt_times = [i - start_time for i in mycallback.times]
 
 
-ipopt_inf_pr = ipopt_solver.stats()['iterations']['inf_pr']
-# ipopt_inf_pr.insert(0, 0.0)
-ipopt_obj = ipopt_solver.stats()['iterations']['obj']
+# ipopt_inf_pr = ipopt_solver.stats()['iterations']['inf_pr']
+# # ipopt_inf_pr.insert(0, 0.0)
+# ipopt_obj = ipopt_solver.stats()['iterations']['obj']
 
 # %% CREATE PROBLEM AND INIT DICTS FOR FP-SQP SOLVER
 problem_dict = {}

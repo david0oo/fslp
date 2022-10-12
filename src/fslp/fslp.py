@@ -3,6 +3,7 @@ We provide a prototypical implementation of the FSLP method.
 """
 import casadi as cs
 import numpy as np
+import quala as qa
 from timeit import default_timer as timer
 
 
@@ -553,6 +554,183 @@ class FSLP_Method:
                 self.slacks_zero_iter = self.n_iter
                 self.slacks_zero_n_eval_g = self.stats['n_eval_g']
 
+    def anderson_acceleration_stageQuala(self, p):
+        """
+        This method performs the Anderso Acceleration using the quala package
+        developed by Pieter Pas.
+        """
+        m_stages = 6
+        aa = qa.AndersonAccel({'memory': m_stages}, self.nx)
+
+        beta = 1.0
+        p_tmp = p
+        # p_old = p
+
+        p_stack = p
+        
+        lam_p_g_tmp = self.lam_p_g_k
+        lam_p_x_tmp = self.lam_p_x_k
+        # x_tmp_min1 = self.x_k
+
+
+        self.x_tmp = self.x_k + p_tmp
+        r = p_tmp
+        g = self.x_tmp
+        aa.initialize(g, r)
+        self.x_tmp = g
+        # x_stack = self.x_k
+        # x_tmp_intermediate = self.x_tmp
+        self.g_tmp = self.__eval_g(self.x_tmp)
+
+        self.kappa_acceptance = False
+
+        inner_iter = 0
+        asymptotic_exactness = []
+        self.prev_infeas = self.feasibility_measure(self.x_tmp, self.g_tmp)
+        self.curr_infeas = self.feasibility_measure(self.x_tmp, self.g_tmp)
+        feasibilities = [self.prev_infeas]
+        step_norms = []
+        kappas = []
+
+        watchdog_prev_inf_norm = self.prev_step_inf_norm
+        accumulated_as_ex = 0
+
+        for j in range(self.max_inner_iter):
+
+            if self.curr_infeas < self.feas_tol:
+                inner_iter = j
+                self.kappa_acceptance = True
+                break
+            elif j > 0 and (self.curr_infeas > 1.0 or as_exac > 1.0):
+                self.kappa_acceptance = False
+                break
+
+            inner_iter = j+1
+            self.lam_tmp_g = self.lam_p_g_k
+            self.lam_tmp_x = self.lam_p_x_k
+
+            # 'Relative' version TR Methods book
+            # d = self.g_tmp
+            # lba_correction = self.lbg - d
+            # uba_correction = self.ubg - d
+
+            if self.gradient_correction:
+                grad_L_tmp = self.__eval_grad_lag(self.x_tmp, lam_p_g_tmp, lam_p_x_tmp)
+                print('Gradient of Lagrangian: ', cs.norm_inf(grad_L_tmp))
+                # Do the gradient correction, could also be + instead of -??
+                grad_f_correction = grad_L_tmp - self.A_k.T @ lam_p_g_tmp - lam_p_x_tmp#self.tr_scale_mat_k.T @ lam_p_x_tmp
+            else:
+                # Do just Zero-Order Iterations
+                grad_f_correction = self.val_grad_f_k
+
+            lbp = cs.fmax(-self.tr_rad_k*self.tr_scale_mat_inv_k @
+                          cs.DM.ones(self.nx, 1) - (self.x_tmp-self.x_k),
+                          self.lbx - self.x_tmp)
+            ubp = cs.fmin(self.tr_rad_k*self.tr_scale_mat_inv_k @
+                          cs.DM.ones(self.nx, 1) - (self.x_tmp-self.x_k),
+                          self.ubx - self.x_tmp)
+
+            lba_correction = self.lbg - self.g_tmp#- d
+            uba_correction = self.ubg - self.g_tmp#- d
+            lb_var_correction = lbp
+            ub_var_correction = ubp
+
+            (_,
+             p_tmp,
+             lam_p_g_tmp,
+             lam_p_x_tmp) = self.solve_lp(g=grad_f_correction,
+                                          a=self.A_k,
+                                          lba=lba_correction,
+                                          uba=uba_correction,
+                                          lbx=lb_var_correction,
+                                          ubx=ub_var_correction)
+
+            p_tmp = self.__set_optimal_slack_step(self.x_tmp, p_tmp)
+
+            self.step_inf_norm = cs.fmax(cs.norm_inf(p_tmp),
+                                         cs.fmax(
+                                             cs.norm_inf(
+                                                 self.lam_tmp_g-self.lam_p_g_k),
+                                             cs.norm_inf(self.lam_tmp_x-
+                                                         self.lam_p_x_k)))
+
+            # From here Newton-Anderson of stage m!!!!
+            # curr_stages = cs.fmin(j, m_stages)
+            # if curr_stages < m_stages:
+            #     p_stack = cs.horzcat(p_tmp, p_stack)
+            #     x_stack = cs.horzcat(self.x_tmp, x_stack)
+            # else:
+            #     p_stack = cs.horzcat(p_tmp, p_stack[:,0:-1])
+            #     x_stack = cs.horzcat(self.x_tmp, x_stack[:,0:-1])
+
+            # F_k = p_stack[:, 0:-1] - p_stack[:, 1:]
+            # print('Dimension of F_k', F_k.shape)
+            # E_k = x_stack[:, 0:-1] - x_stack[:, 1:]
+
+            # pinv_Fk = np.linalg.pinv(F_k)
+            # gamma_k = pinv_Fk @ p_tmp#S()['x']
+
+            # self.x_tmp = x_stack[:, 0] + beta*p_tmp -(E_k + beta*F_k) @ gamma_k
+
+            r = p_tmp
+            g = self.x_tmp + p_tmp
+            aa.compute(g, r)
+            self.x_tmp = g
+
+            # self.x_tmp = self.x_tmp + p_tmp
+            self.g_tmp = self.__eval_g(self.x_tmp)  # x_tmp = x_{tmp-1} + p_tmp
+
+            self.curr_infeas = self.feasibility_measure(self.x_tmp, self.g_tmp)
+            self.prev_infeas = self.curr_infeas
+
+            kappa = self.step_inf_norm/self.prev_step_inf_norm
+            kappas.append(kappa)
+            as_exac = cs.norm_2(
+                self.p_k - (self.x_tmp - self.x_k)) / cs.norm_2(self.p_k)
+            if self.verbose:
+                print("Kappa: ", kappa,
+                      "Infeasibility", self.feasibility_measure(
+                                self.x_tmp, self.g_tmp),
+                      "Asymptotic Exactness: ", as_exac)
+
+            # +1 excludes the first iteration from the kappa test
+            accumulated_as_ex += as_exac
+            if inner_iter % self.watchdog == 0:
+                kappa_watch = self.step_inf_norm/watchdog_prev_inf_norm
+                watchdog_prev_inf_norm = self.step_inf_norm
+                if self.verbose:
+                    print("kappa watchdog: ", kappa_watch)
+                if self.curr_infeas < self.feas_tol and as_exac < 0.5:
+                    self.kappa_acceptance = True
+                    break
+                if kappa_watch > self.contraction_acceptance or\
+                        accumulated_as_ex/self.watchdog > 0.5:
+                    self.kappa_acceptance = False
+                    break
+                accumulated_as_ex = 0
+
+            feasibilities.append(
+                self.feasibility_measure(self.x_tmp, self.g_tmp))
+            asymptotic_exactness.append(as_exac)
+            step_norms.append(cs.norm_inf(p_tmp))
+
+            self.prev_step_inf_norm = self.step_inf_norm
+            self.lam_tmp_g = self.lam_p_g_k
+            self.lam_tmp_x = self.lam_p_x_k
+
+        self.stats['inner_iter'] += inner_iter
+        self.inner_iters.append(inner_iter)
+        self.inner_steps.append(step_norms)
+        self.inner_feas.append(feasibilities)
+        self.inner_as_exac.append(asymptotic_exactness)
+        self.inner_kappas.append(kappas)
+
+        return self.x_tmp, lam_p_g_tmp, lam_p_x_tmp, inner_iter
+
+
+        
+
+
     def anderson_acceleration_stage1(self, p):
         """
         This method performs the Anderson acceleration within the zero-order 
@@ -734,7 +912,7 @@ class FSLP_Method:
         
         lam_p_g_tmp = self.lam_p_g_k
         lam_p_x_tmp = self.lam_p_x_k
-        # x_tmp_min1 = self.x_k
+
         self.x_tmp = self.x_k + beta*p_tmp
         x_stack = self.x_k
         # x_tmp_intermediate = self.x_tmp
@@ -1297,7 +1475,7 @@ class FSLP_Method:
             (self.x_k_correction,
                 self.lam_p_g_k,
                 self.lam_p_x_k,
-                self.feas_iter) = self.anderson_acceleration_stageM(self.p_k)#self.anderson_acceleration_stage1(self.p_k)###self.feasibility_iterations(self.p_k)#
+                self.feas_iter) = self.anderson_acceleration_stageQuala(self.p_k)#self.anderson_acceleration_stageM(self.p_k)#self.anderson_acceleration_stage1(self.p_k)###self.feasibility_iterations(self.p_k)#
 
             if not self.kappa_acceptance:
                 step_accepted = False
