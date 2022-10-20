@@ -4,6 +4,7 @@ We provide a prototypical implementation of the FSLP method.
 import casadi as cs
 import numpy as np
 from timeit import default_timer as timer
+from scalene import scalene_profiler
 
 
 cs.DM.set_precision(16)
@@ -230,6 +231,9 @@ class FSLP_Method:
                 'print_time': False}
             # Needs to be nlpsol_options
             self.subproblem_sol_opts['nlpsol_options'] = opts
+            self.subproblem_sol_opts['verbose'] = True
+            self.subproblem_sol_opts["print_time"] = False
+
 
         if bool(opts) and 'error_on_fail' in opts:
             self.subproblem_sol_opts['error_on_fail'] = opts['error_on_fail']
@@ -327,7 +331,17 @@ class FSLP_Method:
 
             qp_struct = {   'h': B_placeholder.sparsity(),
                             'a': self.A_k.sparsity()}
-            self.subproblem_solver = cs.conic(  "qp_solver",
+            
+            # self.subproblem_sol_opts["dump_in"] = True
+            # self.subproblem_sol_opts["dump_out"] = True
+            # self.subproblem_sol_opts["dump"] = True
+            # self.subproblem_sol_opts["print_out"] = True
+
+            # qp_struct["h"].to_file("h.mtx")
+            # qp_struct["a"].to_file("a.mtx")
+            # print(self.subproblem_sol_opts)
+
+            self.subproblem_solver = cs.conic(  "qpsol",
                                                 self.subproblem_sol,
                                                 qp_struct,
                                                 self.subproblem_sol_opts)
@@ -345,7 +359,10 @@ class FSLP_Method:
                  lba=None,
                  uba=None,
                  lbx=None,
-                 ubx=None):
+                 ubx=None,
+                 x0=None,
+                 lam_x0=None,
+                 lam_a0=None):
         """
         This function solves the lp subproblem. Additionally some processing
         of the result is done and the statistics are saved. The input signature
@@ -374,7 +391,10 @@ class FSLP_Method:
                                         lba=lba,
                                         uba=uba,
                                         lbx=lbx,
-                                        ubx=ubx)
+                                        ubx=ubx,
+                                        x0=x0,
+                                        lam_x0=lam_x0,
+                                        lam_a0=lam_a0)
 
         # Keep track that bounds of QP are guaranteed. If not because of a
         # tolerance, make them exact.
@@ -405,7 +425,10 @@ class FSLP_Method:
                  lba=None,
                  uba=None,
                  lbx=None,
-                 ubx=None):
+                 ubx=None,
+                 x0=None,
+                 lam_x0=None,
+                 lam_a0=None):
         """
         This function solves the qp subproblem. Additionally some processing of
         the result is done and the statistics are saved. The input signature is
@@ -431,7 +454,10 @@ class FSLP_Method:
                                         lba=lba,
                                         uba=uba,
                                         lbx=lbx,
-                                        ubx=ubx)
+                                        ubx=ubx,
+                                        x0=x0,
+                                        lam_x0=lam_x0,
+                                        lam_a0=lam_a0)
         
         # Save some statistics
 
@@ -463,7 +489,10 @@ class FSLP_Method:
                             lba=None,
                             uba=None,
                             lbx=None,
-                            ubx=None):
+                            ubx=None,
+                            x0=None,
+                            lam_x0=None,
+                            lam_a0=None):
         """
         This function solves the qp subproblem. Additionally some processing of
         the result is done and the statistics are saved. The input signature is
@@ -488,14 +517,20 @@ class FSLP_Method:
                                     lba=lba,
                                     uba=uba,
                                     lbx=lbx,
-                                    ubx=ubx)
+                                    ubx=ubx,
+                                    x0=x0,
+                                    lam_x0=lam_x0,
+                                    lam_a0=lam_a0)
         else:
             return self.solve_lp(   g=g,
                                     a=self.A_k,
                                     lba=lba,
                                     uba=uba,
                                     lbx=lbx,
-                                    ubx=ubx)
+                                    ubx=ubx,
+                                    x0=x0,
+                                    lam_x0=lam_x0,
+                                    lam_a0=lam_a0)
         
 
     def __set_optimal_slack_step(self, x, p):
@@ -806,7 +841,10 @@ class FSLP_Method:
                                                     lba=lba_correction,
                                                     uba=uba_correction,
                                                     lbx=lb_var_correction,
-                                                    ubx=ub_var_correction)
+                                                    ubx=ub_var_correction,
+                                                    x0=p_tmp,
+                                                    lam_x0=lam_p_x_tmp,
+                                                    lam_a0=lam_p_g_tmp)
 
             p_tmp.to_file('dx_feas.mtx')
             # p_tmp = self.__set_optimal_slack_step(self.x_tmp, p_tmp)
@@ -1030,6 +1068,7 @@ class FSLP_Method:
             Casadi DM vector, double: the optimal argument of solution and the
                                       optimal function value of solution.
         """
+        # scalene_profiler.start()
         if not bool(init_dict):  # check whether empty
             raise ValueError("Error: You should specify an init_dict!")
 
@@ -1075,6 +1114,7 @@ class FSLP_Method:
 
         self.feas_iter = -1
         self.m_k = -1
+        self.p_k = cs.DM.zeros(self.nx)
 
         self.tr_radii = [self.tr_rad_k]
         self.inner_iters = []
@@ -1124,7 +1164,10 @@ class FSLP_Method:
                                                         lba=self.lba_k,
                                                         uba=self.uba_k,
                                                         lbx=self.lb_var_k,
-                                                        ubx=self.ub_var_k)
+                                                        ubx=self.ub_var_k,
+                                                        x0=self.p_k,
+                                                        lam_x0=self.lam_x_k,
+                                                        lam_a0=self.lam_g_k)
 
             
             if not solve_success:
@@ -1206,4 +1249,5 @@ class FSLP_Method:
         self.stats['accepted_iter'] = self.accepted_counter
         self.stats['iter_slacks_zero'] = self.slacks_zero_iter
         self.stats['n_eval_g_slacks_zero'] = self.slacks_zero_n_eval_g
+        # scalene_profiler.stop()
         return self.x_k, self.val_f_k
