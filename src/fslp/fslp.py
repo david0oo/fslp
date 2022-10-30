@@ -223,6 +223,16 @@ class FSLP_Method:
         else:
             self.lpsol_opts['error_on_fail'] = False
 
+        if bool(opts) and 'feas_strategy' in opts:
+            self.opts_feas_strategy = opts['feas_strategy']
+            if self.opts_feas_strategy not in [1, 2, 3]:
+                raise ValueError
+                
+        if bool(opts) and 'anderson_depth' in opts:
+            self.anderson_depth = opts['anderson_depth']
+        else:
+            self.anderson_depth = 5
+
     def __initialize_functions(self):
         """
         This function initializes the Casadi functions needed to evaluate
@@ -239,28 +249,32 @@ class FSLP_Method:
         self.lagrangian = self.f + self.lam_g.T @ self.g +\
             self.lam_x.T @ self.x
 
-        jit_opts = {
-            "jit":True,
-            "compiler":"shell",
-            "jit_temp_suffix":False,
-            "jit_options":{
-                "flags": ['-O3', '-fopenmp'], 
-                "verbose": True,
+        jit_on = False
+        if jit_on:
+            jit_opts = {
+                "jit":True,
+                "compiler":"shell",
+                "jit_temp_suffix":False,
+                "jit_options":{
+                    "flags": ['-O3', '-fopenmp'], 
+                    "verbose": True,
+                }
             }
-        }
+        else:
+            jit_opts = {}
 
-        self.f_fun = cs.Function('f_fun', [self.x], [self.f])
+        self.f_fun = cs.Function('f_fun', [self.x], [self.f], jit_opts)
 
-        self.grad_f_fun = cs.Function('grad_f_fun', [self.x], [self.grad_f])
+        self.grad_f_fun = cs.Function('grad_f_fun', [self.x], [self.grad_f], jit_opts)
 
-        self.g_fun = cs.Function('g_fun', [self.x], [self.g])
+        self.g_fun = cs.Function('g_fun', [self.x], [self.g], jit_opts)
 
-        self.jac_g_fun = cs.Function('jac_g_fun', [self.x], [self.jac_g])
+        self.jac_g_fun = cs.Function('jac_g_fun', [self.x], [self.jac_g], jit_opts)
 
         self.grad_lag_fun = cs.Function('grad_lag_fun',
                                         [self.x, self.lam_g, self.lam_x],
                                         [cs.gradient(self.lagrangian,
-                                                     self.x)])
+                                                     self.x)], jit_opts)
 
     def __initialize_stats(self):
         """
@@ -322,7 +336,10 @@ class FSLP_Method:
                  lba=None,
                  uba=None,
                  lbx=None,
-                 ubx=None):
+                 ubx=None,
+                 x0=None,
+                 lam_x0=None,
+                 lam_a0=None):
         """
         This function solves the lp subproblem. Additionally some processing
         of the result is done and the statistics are saved. The input signature
@@ -347,11 +364,14 @@ class FSLP_Method:
             search direction
         """
         res = self.lp_solver(g=g,
-                                a=a,
-                                lba=lba,
-                                uba=uba,
-                                lbx=lbx,
-                                ubx=ubx)
+                            a=a,
+                            lba=lba,
+                            uba=uba,
+                            lbx=lbx,
+                            ubx=ubx,
+                            x0=x0,
+                            lam_x0=lam_x0,
+                            lam_a0=lam_a0)
 
         # Keep track that bounds of QP are guaranteed. If not because of a
         # tolerance, make them exact.
@@ -630,8 +650,8 @@ class FSLP_Method:
                           cs.DM.ones(self.nx, 1) - (self.x_tmp-self.x_k),
                           self.ubx - self.x_tmp)
 
-            lba_correction = self.lbg - self.g_tmp#- d
-            uba_correction = self.ubg - self.g_tmp#- d
+            lba_correction = self.lbg - self.g_tmp
+            uba_correction = self.ubg - self.g_tmp
             lb_var_correction = lbp
             ub_var_correction = ubp
 
@@ -643,7 +663,10 @@ class FSLP_Method:
                                           lba=lba_correction,
                                           uba=uba_correction,
                                           lbx=lb_var_correction,
-                                          ubx=ub_var_correction)
+                                          ubx=ub_var_correction,
+                                          x0=p_tmp,
+                                          lam_x0=lam_p_x_tmp,
+                                          lam_a0=lam_p_g_tmp)
 
             p_tmp = self.__set_optimal_slack_step(self.x_tmp, p_tmp)
 
@@ -746,7 +769,7 @@ class FSLP_Method:
             state the multipliers for constraints and states, and the number of
             inner iterations to achieve feasibility.
         """
-
+        inner_iterates = [self.x_k]
         beta = 1.0
         p_tmp = p
         p_old = p
@@ -754,6 +777,7 @@ class FSLP_Method:
         lam_p_x_tmp = self.lam_p_x_k
         x_tmp_min1 = self.x_k
         self.x_tmp = self.x_k + beta*p_tmp
+        inner_iterates.append(self.x_tmp)
         x_tmp_intermediate = self.x_tmp
         self.g_tmp = self.__eval_g(self.x_tmp)
 
@@ -819,7 +843,10 @@ class FSLP_Method:
                                           lba=lba_correction,
                                           uba=uba_correction,
                                           lbx=lb_var_correction,
-                                          ubx=ub_var_correction)
+                                          ubx=ub_var_correction,
+                                          x0=p_tmp,
+                                          lam_x0=lam_p_x_tmp,
+                                          lam_a0=lam_p_g_tmp)
 
             p_tmp = self.__set_optimal_slack_step(self.x_tmp, p_tmp)
 
@@ -831,8 +858,11 @@ class FSLP_Method:
                                                          self.lam_p_x_k)))
 
             gamma = (p_tmp.T @ (p_tmp-p_old))/((p_tmp-p_old).T @ (p_tmp-p_old)) 
+            print('norm inf gamma_k', cs.norm_inf(gamma))
+
 
             self.x_tmp = x_tmp_intermediate + beta*p_tmp -gamma*((x_tmp_intermediate-x_tmp_min1) + beta*(p_tmp -p_old))
+            inner_iterates.append(self.x_tmp)
             p_old = p_tmp
             x_tmp_min1 = x_tmp_intermediate
             x_tmp_intermediate = self.x_tmp
@@ -880,6 +910,7 @@ class FSLP_Method:
 
         self.stats['inner_iter'] += inner_iter
         self.inner_iters.append(inner_iter)
+        self.list_inner_iterates.append(inner_iterates)
         self.inner_steps.append(step_norms)
         self.inner_feas.append(feasibilities)
         self.inner_as_exac.append(asymptotic_exactness)
@@ -887,7 +918,7 @@ class FSLP_Method:
 
         return self.x_tmp, lam_p_g_tmp, lam_p_x_tmp, inner_iter
 
-    def anderson_acceleration_stageM(self, p):
+    def anderson_acceleration_stageM(self, p, m=5):
         """
         This method performs the Anderson acceleration of stage M within the 
         zero-order iterations.
@@ -904,16 +935,17 @@ class FSLP_Method:
         """
 
         beta = 1.0
-        m_stages = 5
+        m_stages = m
         p_tmp = p
         # p_old = p
-
+        inner_iterates = [self.x_k]
         p_stack = p
         
         lam_p_g_tmp = self.lam_p_g_k
         lam_p_x_tmp = self.lam_p_x_k
 
         self.x_tmp = self.x_k + beta*p_tmp
+        inner_iterates.append(self.x_tmp)
         x_stack = self.x_k
         # x_tmp_intermediate = self.x_tmp
         self.g_tmp = self.__eval_g(self.x_tmp)
@@ -979,7 +1011,10 @@ class FSLP_Method:
                                           lba=lba_correction,
                                           uba=uba_correction,
                                           lbx=lb_var_correction,
-                                          ubx=ub_var_correction)
+                                          ubx=ub_var_correction,
+                                          x0=p_tmp,
+                                          lam_x0=lam_p_x_tmp,
+                                          lam_a0=lam_p_g_tmp)
 
             p_tmp = self.__set_optimal_slack_step(self.x_tmp, p_tmp)
 
@@ -1010,8 +1045,10 @@ class FSLP_Method:
             # S = cs.nlpsol('S', 'ipopt', nlp, opts)
             pinv_Fk = np.linalg.pinv(F_k)
             gamma_k = pinv_Fk @ p_tmp#S()['x']
+            print('norm inf gamma_k', cs.norm_inf(gamma_k))
 
             self.x_tmp = x_stack[:, 0] + beta*p_tmp -(E_k + beta*F_k) @ gamma_k
+            inner_iterates.append(self.x_tmp)
             # p_old = p_tmp
             # x_tmp_min1 = x_tmp_intermediate
             # x_tmp_intermediate = self.x_tmp
@@ -1060,6 +1097,7 @@ class FSLP_Method:
         self.stats['inner_iter'] += inner_iter
         self.inner_iters.append(inner_iter)
         self.inner_steps.append(step_norms)
+        self.list_inner_iterates.append(inner_iterates)
         self.inner_feas.append(feasibilities)
         self.inner_as_exac.append(asymptotic_exactness)
         self.inner_kappas.append(kappas)
@@ -1080,10 +1118,12 @@ class FSLP_Method:
             state the multipliers for constraints and states, and the number of
             inner iterations to achieve feasibility.
         """
+        inner_iterates = [self.x_k]
         p_tmp = p
         lam_p_g_tmp = self.lam_p_g_k
         lam_p_x_tmp = self.lam_p_x_k
         self.x_tmp = self.x_k + p_tmp
+        inner_iterates.append(self.x_tmp)
         self.g_tmp = self.__eval_g(self.x_tmp)
 
         self.kappa_acceptance = False
@@ -1112,6 +1152,7 @@ class FSLP_Method:
                     self.kappa_acceptance = False
                     break
             elif j > 0 and (self.curr_infeas > 1.0 or as_exac > 1.0):
+            # elif j > 0 and (self.curr_infeas > 1.0 or as_exac > 1.0):
                 self.kappa_acceptance = False
                 break
 
@@ -1154,7 +1195,10 @@ class FSLP_Method:
                                           lba=lba_correction,
                                           uba=uba_correction,
                                           lbx=lb_var_correction,
-                                          ubx=ub_var_correction)
+                                          ubx=ub_var_correction,
+                                          x0=p_tmp,
+                                          lam_x0=lam_p_x_tmp,
+                                          lam_a0=lam_p_g_tmp)
 
             p_tmp = self.__set_optimal_slack_step(self.x_tmp, p_tmp)
 
@@ -1169,6 +1213,7 @@ class FSLP_Method:
             #                                              self.lam_p_x_k)))
 
             self.x_tmp = self.x_tmp + p_tmp
+            inner_iterates.append(self.x_tmp)
             self.g_tmp = self.__eval_g(self.x_tmp)  # x_tmp = x_{tmp-1} + p_tmp
 
             self.curr_infeas = self.feasibility_measure(self.x_tmp, self.g_tmp)
@@ -1211,6 +1256,7 @@ class FSLP_Method:
 
         self.stats['inner_iter'] += inner_iter
         self.inner_iters.append(inner_iter)
+        self.list_inner_iterates.append(inner_iterates)
         self.inner_steps.append(step_norms)
         self.inner_feas.append(feasibilities)
         self.inner_as_exac.append(asymptotic_exactness)
@@ -1367,12 +1413,12 @@ class FSLP_Method:
 
         if not bool(problem_dict):  # check whether empty
             raise ValueError("Error: You should specify a problem_dict!")
-        self.lasttime = timer()
 
         self.__initialize_parameters(problem_dict, init_dict, opts)
         self.__initialize_functions()
         self.__initialize_stats()
 
+        self.lasttime = timer()
         self.x_k = self.x0
         self.lam_g_k = self.lam_g0
         self.lam_x_k = self.lam_x0
@@ -1407,6 +1453,7 @@ class FSLP_Method:
 
         self.feas_iter = -1
         self.m_k = -1
+        self.p_k = cs.DM.zeros(self.nx)
 
         self.tr_radii = [self.tr_rad_k]
         self.inner_iters = []
@@ -1415,6 +1462,7 @@ class FSLP_Method:
         self.inner_kappas = []
         self.inner_steps = []
         self.asymptotic_exactness = []
+        self.list_inner_iterates = []
         self.list_iter = [self.x_k]
         self.list_feas = [self.feasibility_measure(self.x_k, self.val_g_k)]
         self.list_times = [0.0]
@@ -1445,7 +1493,10 @@ class FSLP_Method:
                                              lba=self.lba_k,
                                              uba=self.uba_k,
                                              lbx=self.lb_var_k,
-                                             ubx=self.ub_var_k)
+                                             ubx=self.ub_var_k,
+                                             x0=self.p_k,
+                                             lam_x0=self.lam_x_k,
+                                             lam_a0=self.lam_g_k)
             if not solve_success:
                 print('Something went wrong in LP: ', self.lp_solver.stats()[
                       'return_status'])
@@ -1471,12 +1522,25 @@ class FSLP_Method:
             #         cs.norm_inf(self.lam_tmp_x-self.lam_p_x_k)
             #     )
             # )
-            self.prev_step_inf_norm = self.step_inf_norm
-            (self.x_k_correction,
-                self.lam_p_g_k,
-                self.lam_p_x_k,
-                self.feas_iter) = self.anderson_acceleration_stageQuala(self.p_k)#self.anderson_acceleration_stageM(self.p_k)#self.anderson_acceleration_stage1(self.p_k)###self.feasibility_iterations(self.p_k)#
 
+            # Do feasibility perturbation here
+            self.prev_step_inf_norm = self.step_inf_norm
+            if self.opts_feas_strategy == 1:
+                (self.x_k_correction,
+                    self.lam_p_g_k,
+                    self.lam_p_x_k,
+                    self.feas_iter) = self.feasibility_iterations(self.p_k)#
+            elif self.opts_feas_strategy == 2:
+                (self.x_k_correction,
+                    self.lam_p_g_k,
+                    self.lam_p_x_k,
+                    self.feas_iter) = self.anderson_acceleration_stage1(self.p_k)
+            elif self.opts_feas_strategy == 3:
+                (self.x_k_correction,
+                    self.lam_p_g_k,
+                    self.lam_p_x_k,
+                    self.feas_iter) = self.anderson_acceleration_stageM(self.p_k, self.anderson_depth)#####self.anderson_acceleration_stageQuala(self.p_k)#
+            
             if not self.kappa_acceptance:
                 step_accepted = False
                 if self.verbose:
