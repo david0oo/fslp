@@ -332,9 +332,9 @@ class FSLP_Method:
             qp_struct = {   'h': B_placeholder.sparsity(),
                             'a': self.A_k.sparsity()}
             
-            # self.subproblem_sol_opts["dump_in"] = True
-            # self.subproblem_sol_opts["dump_out"] = True
-            # self.subproblem_sol_opts["dump"] = True
+            self.subproblem_sol_opts["dump_in"] = True
+            self.subproblem_sol_opts["dump_out"] = True
+            self.subproblem_sol_opts["dump"] = True
             # self.subproblem_sol_opts["print_out"] = True
 
             # qp_struct["h"].to_file("h.mtx")
@@ -348,7 +348,7 @@ class FSLP_Method:
         else:
             lp_struct = {'a': self.A_k.sparsity()}
 
-            self.subproblem_solver = cs.conic(  "lp_solver",
+            self.subproblem_solver = cs.conic(  "qpsol",
                                                 self.subproblem_sol,
                                                 lp_struct,
                                                 self.subproblem_sol_opts)
