@@ -796,7 +796,8 @@ class FSLP_Method:
 
         for j in range(self.max_inner_iter):
 
-            if self.curr_infeas < self.feas_tol:
+            if cs.norm_inf(self.tr_scale_mat_k @ p_tmp) < self.feas_tol:
+            # if self.curr_infeas < self.feas_tol:
                 inner_iter = j
                 self.kappa_acceptance = True
                 break
@@ -965,7 +966,8 @@ class FSLP_Method:
 
         for j in range(self.max_inner_iter):
 
-            if self.curr_infeas < self.feas_tol:
+            if cs.norm_inf(self.tr_scale_mat_k @ p_tmp) < self.feas_tol:
+            # if self.curr_infeas < self.feas_tol:
                 inner_iter = j
                 self.kappa_acceptance = True
                 break
@@ -1142,8 +1144,8 @@ class FSLP_Method:
         accumulated_as_ex = 0
 
         for j in range(self.max_inner_iter):
-
-            if self.curr_infeas < self.feas_tol:
+            if cs.norm_inf(self.tr_scale_mat_k @ p_tmp) < self.feas_tol:
+            # if self.curr_infeas < self.feas_tol:
                 inner_iter = j
                 if as_exac < 0.5:               
                     self.kappa_acceptance = True
