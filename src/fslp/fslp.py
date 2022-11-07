@@ -375,19 +375,19 @@ class FSLP_Method:
 
         # Keep track that bounds of QP are guaranteed. If not because of a
         # tolerance, make them exact.
-        p_tmp = res['x']
-        # Get indeces where variables are violated
-        lower_p = list(np.nonzero(np.array(p_tmp < lbx).squeeze())[0])
-        upper_p = list(np.nonzero(np.array(p_tmp > ubx).squeeze())[0])
+        # p_tmp = res['x']
+        # # Get indeces where variables are violated
+        # lower_p = list(np.nonzero(np.array(p_tmp < lbx).squeeze())[0])
+        # upper_p = list(np.nonzero(np.array(p_tmp > ubx).squeeze())[0])
 
-        # Resolve the 'violation' in the search direction
-        if bool(lower_p):
-            p_tmp[lower_p] = lbx[lower_p]
-        if bool(upper_p):
-            p_tmp[upper_p] = ubx[upper_p]
+        # # Resolve the 'violation' in the search direction
+        # if bool(lower_p):
+        #     p_tmp[lower_p] = lbx[lower_p]
+        # if bool(upper_p):
+        #     p_tmp[upper_p] = ubx[upper_p]
 
         # Process the new search directions and multipliers w/o slacks
-        p = p_tmp
+        p = res['x']#p_tmp
         lam_p_g = res['lam_a']
         lam_p_x = res['lam_x']
 
@@ -1016,7 +1016,7 @@ class FSLP_Method:
                                           lam_x0=lam_p_x_tmp,
                                           lam_a0=lam_p_g_tmp)
 
-            p_tmp = self.__set_optimal_slack_step(self.x_tmp, p_tmp)
+            # p_tmp = self.__set_optimal_slack_step(self.x_tmp, p_tmp)
 
             self.step_inf_norm = cs.fmax(cs.norm_inf(p_tmp),
                                          cs.fmax(
@@ -1200,7 +1200,7 @@ class FSLP_Method:
                                           lam_x0=lam_p_x_tmp,
                                           lam_a0=lam_p_g_tmp)
 
-            p_tmp = self.__set_optimal_slack_step(self.x_tmp, p_tmp)
+            # p_tmp = self.__set_optimal_slack_step(self.x_tmp, p_tmp)
 
             self.step_inf_norm = cs.norm_inf(self.tr_scale_mat_k @ p_tmp)
 
