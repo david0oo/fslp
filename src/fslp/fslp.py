@@ -347,7 +347,9 @@ class FSLP_Method:
                                                 self.subproblem_sol_opts)
         else:
             lp_struct = {'a': self.A_k.sparsity()}
-
+            self.subproblem_sol_opts["dump_in"] = True
+            self.subproblem_sol_opts["dump_out"] = True
+            self.subproblem_sol_opts["dump"] = True
             self.subproblem_solver = cs.conic(  "qpsol",
                                                 self.subproblem_sol,
                                                 lp_struct,
@@ -1154,7 +1156,8 @@ class FSLP_Method:
             self.ub_var_k.to_file('ub_var.mtx')
             self.lba_k.to_file('lba.mtx')
             self.uba_k.to_file('uba.mtx')
-            self.H_k.to_file('Bk.mtx')
+            if self.solver_type == 'SQP':
+                self.H_k.to_file('Bk.mtx')
             self.A_k.to_file('Jk.mtx')
             
             (solve_success,
