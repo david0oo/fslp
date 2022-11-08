@@ -242,6 +242,18 @@ class FSLP_Method:
         else:
             self.subproblem_sol_opts['error_on_fail'] = False
 
+        # -----------------------------------------------------------
+        if bool(opts) and 'use_anderson' in opts:
+            self.use_anderson = opts['use_anderson']
+        else:
+            self.use_anderson = False
+
+        if bool(opts) and 'anderson_memory' in opts:
+            self.sz_anderson_memory = opts['anderson_memory']
+        else:
+            self.sz_anderson_memory = 1
+        
+
     def __initialize_functions(self, opts={}):
         """
         This function initializes the Casadi functions needed to evaluate
@@ -730,6 +742,54 @@ class FSLP_Method:
                 self.slacks_zero_iter = self.n_iter
                 self.slacks_zero_n_eval_g = self.stats['n_eval_g']
 
+    def anderson_acc_init_memory(self, p, x):
+        """
+        Initializes the memory of the Anderson acceleration.
+        p       the step to be stored
+        x       the iterate to be stored
+
+        """
+        self.anderson_memory_step = cs.DM.zeros(self.nx, self.sz_anderson_memory)
+        self.anderson_memory_iterate = cs.DM.zeros(self.nx, self.sz_anderson_memory)
+
+        if self.sz_anderson_memory == 1:
+            self.anderson_memory_step[:, 0] = p
+            self.anderson_memory_iterate[:, 0] = x
+        else:
+            raise NotImplementedError('Not implemented yet')
+
+    def anderson_acc_update_memory(self, p, x):
+        """
+        Update the memory of the Anderson acceleration.
+        p       the step to be stored
+        x       the iterate to be stored
+
+        """
+        if self.sz_anderson_memory == 1:
+            self.anderson_memory_step[:, 0] = p
+            self.anderson_memory_iterate[:, 0] = x
+        else:
+            raise NotImplementedError('Not implemented yet')
+
+    def anderson_acc_step_update(self, p_curr, x_curr):
+        """
+        This file does the Anderson step update
+
+        Args:
+            p (_type_): _description_
+            x (_type_): _description_
+        """
+        beta = 1
+        if self.sz_anderson_memory == 1:
+            gamma = (p_curr.T @ (p_curr-self.anderson_memory_step[:,0]))/((p_curr-self.anderson_memory_step[:,0]).T @ (p_curr-self.anderson_memory_step[:,0]))
+            x_plus = x_curr + beta*p_curr - gamma*(x_curr-self.anderson_memory_iterate[:,0] + beta*p_curr - beta*self.anderson_memory_step[:,0])
+            self.anderson_acc_update_memory(p_curr, x_curr)
+        else:
+            raise NotImplementedError('Not implemented yet')
+
+        return x_plus
+
+
     def feasibility_iterations(self, p):
         """
         The feasibility iterations are performed here.
@@ -747,6 +807,10 @@ class FSLP_Method:
         p_tmp = p
         lam_p_g_tmp = self.lam_p_g_k
         lam_p_x_tmp = self.lam_p_x_k
+
+        if self.use_anderson:
+            self.anderson_acc_init_memory(p_tmp, self.x_k)
+
         self.x_tmp = self.x_k + p_tmp
         self.g_tmp = self.__eval_g(self.x_tmp)
 
@@ -837,7 +901,10 @@ class FSLP_Method:
             #                                  cs.norm_inf(self.lam_tmp_x-
             #                                              self.lam_p_x_k)))
 
-            self.x_tmp = self.x_tmp + p_tmp
+            if self.use_anderson:
+                self.x_tmp = self.anderson_acc_step_update(p_tmp, self.x_tmp)
+            else:
+                self.x_tmp = self.x_tmp + p_tmp
             self.g_tmp = self.__eval_g(self.x_tmp)  # x_tmp = x_{tmp-1} + p_tmp
 
             self.curr_infeas = self.feasibility_measure(self.x_tmp, self.g_tmp)
@@ -1164,7 +1231,7 @@ class FSLP_Method:
 
             if cs.fabs(self.m_k) < self.optim_tol:
                 if self.verbose:
-                    print('Optimal Point Found? Linear model is zero.')
+                    print('Optimal Point Found? Linear model is {m_k:^10.4e}.'.format(m_k=self.m_k))
                 self.success = True
                 self.stats['success'] = True
                 break
