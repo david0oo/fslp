@@ -346,9 +346,9 @@ class FSLP_Method:
             qp_struct = {   'h': B_placeholder.sparsity(),
                             'a': self.A_k.sparsity()}
             
-            self.subproblem_sol_opts["dump_in"] = True
-            self.subproblem_sol_opts["dump_out"] = True
-            self.subproblem_sol_opts["dump"] = True
+            # self.subproblem_sol_opts["dump_in"] = True
+            # self.subproblem_sol_opts["dump_out"] = True
+            # self.subproblem_sol_opts["dump"] = True
             # self.subproblem_sol_opts["print_out"] = True
 
             # qp_struct["h"].to_file("h.mtx")
@@ -1231,7 +1231,7 @@ class FSLP_Method:
 
             if cs.fabs(self.m_k) < self.optim_tol:
                 if self.verbose:
-                    print('Optimal Point Found? Linear model is {m_k:^10.4e}.'.format(m_k=self.m_k))
+                    print('Optimal Point Found? Linear model is {m_k:^10.4e}.'.format(m_k=np.array(self.m_k).squeeze()))
                 self.success = True
                 self.stats['success'] = True
                 break
