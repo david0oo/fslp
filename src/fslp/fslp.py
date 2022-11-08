@@ -3,7 +3,7 @@ We provide a prototypical implementation of the FSLP method.
 """
 import casadi as cs
 import numpy as np
-import quala as qa
+# import quala as qa
 from timeit import default_timer as timer
 
 
@@ -223,6 +223,7 @@ class FSLP_Method:
         else:
             self.lpsol_opts['error_on_fail'] = False
 
+        self.opts_feas_strategy = 2
         if bool(opts) and 'feas_strategy' in opts:
             self.opts_feas_strategy = opts['feas_strategy']
             if self.opts_feas_strategy not in [1, 2, 3]:
@@ -322,10 +323,13 @@ class FSLP_Method:
         This function creates an LP-solver object with the casadi conic 
         operation.
         """
+        self.lpsol_opts["dump_in"] = True
+        self.lpsol_opts["dump_out"] = True
+        self.lpsol_opts["dump"] = True
         
         lp_struct = {'a': self.A_k.sparsity()}
 
-        self.lp_solver = cs.conic("lp_solver",
+        self.lp_solver = cs.conic("qpsol",
                                     self.lpsol,
                                     lp_struct,
                                     self.lpsol_opts)
@@ -777,6 +781,7 @@ class FSLP_Method:
         lam_p_x_tmp = self.lam_p_x_k
         x_tmp_min1 = self.x_k
         self.x_tmp = self.x_k + beta*p_tmp
+        self.x_tmp.to_file('dx_anderson1.mtx')
         inner_iterates.append(self.x_tmp)
         x_tmp_intermediate = self.x_tmp
         self.g_tmp = self.__eval_g(self.x_tmp)
@@ -859,10 +864,13 @@ class FSLP_Method:
                                                          self.lam_p_x_k)))
 
             gamma = (p_tmp.T @ (p_tmp-p_old))/((p_tmp-p_old).T @ (p_tmp-p_old)) 
+            gamma.to_file('gamma.mtx')
             print('norm inf gamma_k', cs.norm_inf(gamma))
 
 
-            self.x_tmp = x_tmp_intermediate + beta*p_tmp -gamma*((x_tmp_intermediate-x_tmp_min1) + beta*(p_tmp -p_old))
+            self.x_tmp = x_tmp_intermediate + beta*p_tmp -gamma*(x_tmp_intermediate-x_tmp_min1 + beta*p_tmp -beta*p_old)
+            self.x_tmp.to_file('dx_anderson2.mtx')
+            
             inner_iterates.append(self.x_tmp)
             p_old = p_tmp
             x_tmp_min1 = x_tmp_intermediate
