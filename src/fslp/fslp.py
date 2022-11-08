@@ -340,15 +340,15 @@ class FSLP_Method:
         This function creates an LP-solver object with the casadi conic 
         operation.
         """
+        # self.subproblem_sol_opts["dump_in"] = True
+        # self.subproblem_sol_opts["dump_out"] = True
+        # self.subproblem_sol_opts["dump"] = True
         if self.use_sqp:
             B_placeholder = self.hess_lag_fun(self.x0, self.lam_g0, self.lam_x0)
 
             qp_struct = {   'h': B_placeholder.sparsity(),
                             'a': self.A_k.sparsity()}
             
-            # self.subproblem_sol_opts["dump_in"] = True
-            # self.subproblem_sol_opts["dump_out"] = True
-            # self.subproblem_sol_opts["dump"] = True
             # self.subproblem_sol_opts["print_out"] = True
 
             # qp_struct["h"].to_file("h.mtx")
@@ -361,9 +361,7 @@ class FSLP_Method:
                                                 self.subproblem_sol_opts)
         else:
             lp_struct = {'a': self.A_k.sparsity()}
-            self.subproblem_sol_opts["dump_in"] = True
-            self.subproblem_sol_opts["dump_out"] = True
-            self.subproblem_sol_opts["dump"] = True
+            
             self.subproblem_solver = cs.conic(  "qpsol",
                                                 self.subproblem_sol,
                                                 lp_struct,
@@ -752,11 +750,15 @@ class FSLP_Method:
         self.anderson_memory_step = cs.DM.zeros(self.nx, self.sz_anderson_memory)
         self.anderson_memory_iterate = cs.DM.zeros(self.nx, self.sz_anderson_memory)
 
-        if self.sz_anderson_memory == 1:
-            self.anderson_memory_step[:, 0] = p
-            self.anderson_memory_iterate[:, 0] = x
-        else:
-            raise NotImplementedError('Not implemented yet')
+        # if self.sz_anderson_memory == 1:
+        #     self.anderson_memory_step[:, 0] = p
+        #     self.anderson_memory_iterate[:, 0] = x
+        # else:
+        #     raise NotImplementedError('Not implemented yet')
+
+        # Should be the same for any m
+        self.anderson_memory_step[:, 0] = p
+        self.anderson_memory_iterate[:, 0] = x
 
     def anderson_acc_update_memory(self, p, x):
         """
@@ -765,27 +767,49 @@ class FSLP_Method:
         x       the iterate to be stored
 
         """
-        if self.sz_anderson_memory == 1:
-            self.anderson_memory_step[:, 0] = p
-            self.anderson_memory_iterate[:, 0] = x
-        else:
-            raise NotImplementedError('Not implemented yet')
+        # if self.sz_anderson_memory == 1:
+        #     self.anderson_memory_step[:, 0] = p
+        #     self.anderson_memory_iterate[:, 0] = x
+        # else:
+        if self.sz_anderson_memory != 1:
+            self.anderson_memory_step[:,1:] = self.anderson_memory_step[:,0:-1]
+            self.anderson_memory_iterate[:,1:] = self.anderson_memory_iterate[:,0:-1]
+            # raise NotImplementedError('Not implemented yet')
 
-    def anderson_acc_step_update(self, p_curr, x_curr):
+        # Is used for all updates
+        self.anderson_memory_step[:, 0] = p
+        self.anderson_memory_iterate[:, 0] = x
+
+    def anderson_acc_step_update(self, p_curr, x_curr, j):
         """
         This file does the Anderson step update
 
         Args:
             p (_type_): _description_
             x (_type_): _description_
+            j: inner iterate index
         """
         beta = 1
         if self.sz_anderson_memory == 1:
             gamma = (p_curr.T @ (p_curr-self.anderson_memory_step[:,0]))/((p_curr-self.anderson_memory_step[:,0]).T @ (p_curr-self.anderson_memory_step[:,0]))
             x_plus = x_curr + beta*p_curr - gamma*(x_curr-self.anderson_memory_iterate[:,0] + beta*p_curr - beta*self.anderson_memory_step[:,0])
-            self.anderson_acc_update_memory(p_curr, x_curr)
+            # self.anderson_acc_update_memory(p_curr, x_curr)
         else:
-            raise NotImplementedError('Not implemented yet')
+            curr_stages = min(j, self.sz_anderson_memory)
+            # raise NotImplementedError('Not implemented yet')
+
+            p_stack = cs.horzcat(p_curr, self.anderson_memory_step[:, 0:curr_stages])
+            x_stack = cs.horzcat(x_curr, self.anderson_memory_iterate[:, 0:curr_stages])
+
+            F_k = p_stack[:, 0:-1] - p_stack[:, 1:]
+            # print('Dimension of F_k', F_k.shape)
+            E_k = x_stack[:, 0:-1] - x_stack[:, 1:]
+
+            pinv_Fk = np.linalg.pinv(F_k)
+            gamma_k = pinv_Fk @ p_curr
+            x_plus = x_curr + beta*p_curr -(E_k + beta*F_k) @ gamma_k
+            
+        self.anderson_acc_update_memory(p_curr, x_curr)
 
         return x_plus
 
@@ -902,7 +926,7 @@ class FSLP_Method:
             #                                              self.lam_p_x_k)))
 
             if self.use_anderson:
-                self.x_tmp = self.anderson_acc_step_update(p_tmp, self.x_tmp)
+                self.x_tmp = self.anderson_acc_step_update(p_tmp, self.x_tmp, j+1)
             else:
                 self.x_tmp = self.x_tmp + p_tmp
             self.g_tmp = self.__eval_g(self.x_tmp)  # x_tmp = x_{tmp-1} + p_tmp
