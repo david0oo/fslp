@@ -201,8 +201,10 @@ class FSLP_Method:
 
         if self.solver_type == 'SQP':
             print("SOLVING PROBLEM WITH SQP!\n")
+            self.use_sqp = True
         else:
             print("SOLVING PROBLEM WITH SLP!\n")
+            self.use_sqp = False
 
 
         self.subproblem_sol_opts = {}
@@ -269,7 +271,7 @@ class FSLP_Method:
                                         [cs.gradient(self.lagrangian,
                                                      self.x)])
                                                     
-        if self.solver_type == 'SQP' and bool(opts) and 'hess_lag_fun' in opts:
+        if self.use_sqp and bool(opts) and 'hess_lag_fun' in opts:
             self.hess_lag_fun = opts['hess_lag_fun']
         else:
             self.hess_lag_fun = cs.Function('hess_lag_fun',
@@ -326,7 +328,7 @@ class FSLP_Method:
         This function creates an LP-solver object with the casadi conic 
         operation.
         """
-        if self.solver_type == 'SQP':
+        if self.use_sqp:
             B_placeholder = self.hess_lag_fun(self.x0, self.lam_g0, self.lam_x0)
 
             qp_struct = {   'h': B_placeholder.sparsity(),
@@ -512,7 +514,7 @@ class FSLP_Method:
         lam_p_scale     Casadi DM vector, the lagrange multipliers for the new
                         search direction
         """
-        if self.solver_type == 'SQP':
+        if self.use_sqp:
             return self.solve_qp(   h=self.H_k,
                                     g=g,
                                     a=self.A_k,
@@ -589,7 +591,7 @@ class FSLP_Method:
             self.val_g_k = self.__eval_g(self.x_k)
         self.val_grad_f_k = self.__eval_grad_f(self.x_k)
         self.val_jac_g_k = self.__eval_jac_g(self.x_k)
-        if self.solver_type == 'SQP':
+        if self.use_sqp:
             self.hess_lag_k = self.__eval_hess_l(self.x_k,
                                                  self.lam_g_k,
                                                  self.lam_x_k)
@@ -682,7 +684,7 @@ class FSLP_Method:
         """
         self.A_k = self.val_jac_g_k
         self.g_k = self.val_grad_f_k
-        if self.solver_type == 'SQP':
+        if self.use_sqp:
             self.H_k = self.hess_lag_k
 
     def __prepare_subproblem_bounds_constraints(self):
@@ -781,11 +783,6 @@ class FSLP_Method:
             self.lam_tmp_g = self.lam_p_g_k
             self.lam_tmp_x = self.lam_p_x_k
 
-            # 'Relative' version TR Methods book
-            # d = self.g_tmp
-            # lba_correction = self.lbg - d
-            # uba_correction = self.ubg - d
-
             if self.gradient_correction:
                 grad_L_tmp = self.__eval_grad_lag(self.x_tmp, lam_p_g_tmp, lam_p_x_tmp)
                 print('Gradient of Lagrangian: ', cs.norm_inf(grad_L_tmp))
@@ -793,32 +790,11 @@ class FSLP_Method:
                 grad_f_correction = grad_L_tmp - self.A_k.T @ lam_p_g_tmp - lam_p_x_tmp#self.tr_scale_mat_k.T @ lam_p_x_tmp
             else:
                 # Do just Zero-Order Iterations
-                if self.solver_type == 'SQP':
+                if self.use_sqp:
                     grad_f_correction = self.val_grad_f_k + self.H_k @ (self.x_tmp - self.x_k)
                 else:
                     grad_f_correction = self.val_grad_f_k
-
-            cs.DM(self.tr_rad_k*self.tr_scale_mat_inv_k @
-                          cs.DM.ones(self.nx, 1)).to_file('ubx_feas_part1_part1.mtx')
-            self.x_tmp.to_file('ubx_feas_part1_zfeas.mtx')
-            # cs.DM(self.tr_rad_k*self.tr_scale_mat_inv_k @
-            #               cs.DM.ones(self.nx, 1) - (self.x_tmp-self.x_k)).to_file('ubx_feas_part1.mtx')
-            cs.DM(self.tr_rad_k*self.tr_scale_mat_inv_k @
-                          cs.DM.ones(self.nx, 1) - self.x_tmp+self.x_k).to_file('ubx_feas_part1.mtx')
-            cs.DM(self.ubx - self.x_tmp).to_file('ubx_feas_part2.mtx')
-
-            cs.DM(-self.tr_rad_k*self.tr_scale_mat_inv_k @
-                          cs.DM.ones(self.nx, 1)).to_file('lbx_feas_part1_part1.mtx')
-            cs.DM(-self.tr_rad_k*self.tr_scale_mat_inv_k @
-                          cs.DM.ones(self.nx, 1) - (self.x_tmp-self.x_k)).to_file('lbx_feas_part1.mtx')
-            cs.DM(self.lbx - self.x_tmp).to_file('lbx_feas_part2.mtx')
-
-            # lb_var_correction = cs.fmax(-self.tr_rad_k*self.tr_scale_mat_inv_k @
-            #               cs.DM.ones(self.nx, 1) - (self.x_tmp-self.x_k),
-            #               self.lbx - self.x_tmp)
-            # ub_var_correction = cs.fmin(self.tr_rad_k*self.tr_scale_mat_inv_k @
-            #               cs.DM.ones(self.nx, 1) - (self.x_tmp-self.x_k),
-            #               self.ubx - self.x_tmp)
+            
             lb_var_correction = cs.fmax(-self.tr_rad_k*self.tr_scale_mat_inv_k @
                           cs.DM.ones(self.nx, 1) - self.x_tmp+self.x_k,
                           self.lbx - self.x_tmp)
@@ -835,7 +811,6 @@ class FSLP_Method:
             lb_var_correction.to_file('lb_var_correction.mtx')
             ub_var_correction.to_file('ub_var_correction.mtx')
             
-
             (_,
             p_tmp,
             lam_p_g_tmp,
@@ -937,7 +912,7 @@ class FSLP_Method:
         Returns:
             double: the value of the linear model at the given direction p.
         """
-        if self.solver_type == 'SQP':
+        if self.use_sqp:
             return self.val_grad_f_k.T @ p + 0.5 * p.T @ self.H_k @ p
         else:
             return self.val_grad_f_k.T @ p
@@ -1156,7 +1131,7 @@ class FSLP_Method:
             self.ub_var_k.to_file('ub_var.mtx')
             self.lba_k.to_file('lba.mtx')
             self.uba_k.to_file('uba.mtx')
-            if self.solver_type == 'SQP':
+            if self.use_sqp:
                 self.H_k.to_file('Bk.mtx')
             self.A_k.to_file('Jk.mtx')
             
@@ -1174,7 +1149,7 @@ class FSLP_Method:
 
             
             if not solve_success:
-                if self.solver_type == 'SQP':
+                if self.use_sqp:
                     # TODO: correct this
                     print('Something went wrong in QP: ', self.subproblem_solver.stats()[
                         'return_status'])
