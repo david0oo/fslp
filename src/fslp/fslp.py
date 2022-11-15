@@ -855,6 +855,7 @@ class FSLP_Method:
 
         for j in range(self.max_inner_iter):
 
+            # if cs.norm_inf(self.tr_scale_mat_k @ p_tmp) < self.feas_tol:
             if self.curr_infeas < self.feas_tol:
                 inner_iter = j
                 if as_exac < 0.5:               
@@ -1019,7 +1020,7 @@ class FSLP_Method:
         p_k_correction comes from the feasibility iterations
         """
         f_correction = self.f_fun(self.x_k_correction)
-        self.list_mks.append(cs.fabs(self.m_k))
+        self.list_mks.append(float(cs.fabs(self.m_k)))
         if (self.val_f_k - f_correction) <= 0:
             if self.verbose:
                 print('ared is negative')
@@ -1258,6 +1259,7 @@ class FSLP_Method:
                     print('Optimal Point Found? Linear model is {m_k:^10.4e}.'.format(m_k=np.array(self.m_k).squeeze()))
                 self.success = True
                 self.stats['success'] = True
+                self.list_mks.append(float(cs.fabs(self.m_k)))
                 break
 
             self.step_inf_norm = cs.norm_inf(self.tr_scale_mat_k @ self.p_k)
