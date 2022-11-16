@@ -20,7 +20,7 @@ from matplotlib import pyplot as plt
 
 
 def latexify():
-    params = {'backend': 'ps',
+    params = {#'backend': 'ps',
               'axes.labelsize': 10,
               'axes.titlesize': 10,
               'legend.fontsize': 10,
@@ -44,7 +44,8 @@ lbg = cs.vertcat(0, 0)
 ubg = cs.vertcat(cs.inf, cs.inf)
 lbx = -cs.inf
 ubx = cs.inf
-x0 = cs.vertcat(2, 10)
+# x0 = cs.vertcat(2, 10)
+x0 = cs.vertcat(2, 5)
 
 problem_dict = {}
 problem_dict['x'] = x
@@ -57,7 +58,7 @@ init_dict['ubx'] = ubx
 init_dict['lbg'] = lbg
 init_dict['ubg'] = ubg
 init_dict['x0'] = x0
-init_dict['tr_rad0'] = 1
+init_dict['tr_rad0'] = 5.5#1
 
 opts = {}
 opts['lpsol'] = 'cplex'
