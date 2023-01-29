@@ -19,6 +19,10 @@ class FSLP_Method:
         """
         self.subproblem_solver = None
         self.solver_type = 'SLP'
+        self.regularization_factor_min = 1e-4
+        self.regularization_factor_max = 100
+        self.regularization_factor_increase = 10
+        self.regularize = True
 
     def __initialize_parameters(self, problem_dict, init_dict, opts={}):
         """
@@ -695,7 +699,18 @@ class FSLP_Method:
         self.A_k = self.val_jac_g_k
         self.g_k = self.val_grad_f_k
         if self.use_sqp:
-            self.H_k = self.hess_lag_k
+            if self.regularize:
+                self.H_k = self.hess_lag_k
+                self.regularization_factor = 0
+                while min(np.linalg.eig(self.H_k)[0]) < self.regularization_factor_min and self.regularization_factor <= self.regularization_factor_max:
+                    if self.regularization_factor == 0:
+                        self.regularization_factor = self.regularization_factor_min
+                    else:
+                        self.regularization_factor *= self.regularization_factor_increase
+                    self.H_k += self.regularization_factor*cs.DM.eye(self.nx)
+                print('factor', self.regularization_factor)
+            else:
+                self.H_k = self.hess_lag_k
 
     def __prepare_subproblem_bounds_constraints(self):
         """
