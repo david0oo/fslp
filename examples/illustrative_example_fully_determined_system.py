@@ -60,17 +60,25 @@ init_dict['ubg'] = ubg
 init_dict['x0'] = x0
 init_dict['tr_rad0'] = 5.5#1
 
+# opts = {}
+# opts['lpsol'] = 'cplex'
+# opts['lpsol_opts'] = {'verbose': False,
+#                       'tol': 1e-9,
+#                       'qp_method': 2,
+#                       'warm_start': True,
+#                       'dep_check': 2,
+#                       'cplex': {'CPXPARAM_Simplex_Display': 0,
+#                                 'CPXPARAM_ScreenOutput': 0}}
+# opts['max_iter'] = 45
+# opts['optim_tol'] = 1e-12
+
+
 opts = {}
-opts['lpsol'] = 'cplex'
-opts['lpsol_opts'] = {'verbose': False,
-                      'tol': 1e-9,
-                      'qp_method': 2,
-                      'warm_start': True,
-                      'dep_check': 2,
-                      'cplex': {'CPXPARAM_Simplex_Display': 0,
-                                'CPXPARAM_ScreenOutput': 0}}
-opts['max_iter'] = 45
-opts['optim_tol'] = 1e-12
+opts['solver_type'] = 'SQP'
+opts['subproblem_sol'] = 'qpoases'
+opts['subproblem_sol_opts'] = {'nWSR':10000, "sparse":True, 'hessian_type': 'semidef', 'printLevel': 'none'}
+opts['max_iter'] = 500
+opts['optim_tol'] = 1e-10
 
 # Create FSLP solver
 feasible_solver = fslp.FSLP_Method()
@@ -107,6 +115,7 @@ plt.xlim((0, len(m_k_undetermined)))
 plt.ylabel('infinity norm of linear model $\Vert m_k \Vert_{\infty}$')
 plt.grid(alpha=0.5)
 plt.tight_layout()
+plt.legend()
 # plt.savefig(f"illustrative_example.pdf",
 #             dpi=300,
 #             bbox_inches='tight',
