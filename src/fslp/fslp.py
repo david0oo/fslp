@@ -4,7 +4,7 @@ We provide a prototypical implementation of the FSLP method.
 import casadi as cs
 import numpy as np
 from timeit import default_timer as timer
-from scalene import scalene_profiler
+# from scalene import scalene_profiler
 
 
 cs.DM.set_precision(16)
@@ -24,7 +24,10 @@ class FSLP_Method:
         self.regularization_factor_increase = 10
         self.regularize = True
 
-    def __initialize_parameters(self, problem_dict, init_dict, opts={}):
+    def __initialize_parameters(self,
+                                problem_dict: dict,
+                                init_dict: dict,
+                                opts: dict = {}):
         """
         This function initializes all parameters which are given from
         outside. This includes the problem formulation and algorithmic
@@ -257,8 +260,7 @@ class FSLP_Method:
         else:
             self.sz_anderson_memory = 1
         
-
-    def __initialize_functions(self, opts={}):
+    def __initialize_functions(self, opts: dict={}):
         """
         This function initializes the Casadi functions needed to evaluate
         the objective, constraints, gradients, jacobians, Hessians...
@@ -322,7 +324,7 @@ class FSLP_Method:
         # convergence status of the FSLP algorithm
         self.stats['success'] = False
 
-    def feasibility_measure(self, x, g_x):
+    def feasibility_measure(self, x: cs.DM, g_x: cs.DM):
         """
         The feasibility measure in the l-\\infty norm.
 
@@ -372,15 +374,15 @@ class FSLP_Method:
                                                 self.subproblem_sol_opts)
 
     def solve_lp(self,
-                 g=None,
-                 a=None,
-                 lba=None,
-                 uba=None,
-                 lbx=None,
-                 ubx=None,
-                 x0=None,
-                 lam_x0=None,
-                 lam_a0=None):
+                 g:cs.DM=None,
+                 a:cs.DM=None,
+                 lba:cs.DM=None,
+                 uba:cs.DM=None,
+                 lbx:cs.DM=None,
+                 ubx:cs.DM=None,
+                 x0:cs.DM=None,
+                 lam_x0:cs.DM=None,
+                 lam_a0:cs.DM=None):
         """
         This function solves the lp subproblem. Additionally some processing
         of the result is done and the statistics are saved. The input signature
@@ -437,16 +439,16 @@ class FSLP_Method:
         return (solve_success, p, lam_p_g, lam_p_x)
 
     def solve_qp(self,
-                 h=None,
-                 g=None,
-                 a=None,
-                 lba=None,
-                 uba=None,
-                 lbx=None,
-                 ubx=None,
-                 x0=None,
-                 lam_x0=None,
-                 lam_a0=None):
+                 h:cs.DM=None,
+                 g:cs.DM=None,
+                 a:cs.DM=None,
+                 lba:cs.DM=None,
+                 uba:cs.DM=None,
+                 lbx:cs.DM=None,
+                 ubx:cs.DM=None,
+                 x0:cs.DM=None,
+                 lam_x0:cs.DM=None,
+                 lam_a0:cs.DM=None):
         """
         This function solves the qp subproblem. Additionally some processing of
         the result is done and the statistics are saved. The input signature is
@@ -503,14 +505,14 @@ class FSLP_Method:
         return (solve_success, p, lam_p_g, lam_p_x)
 
     def solve_subproblem(   self,
-                            g=None,
-                            lba=None,
-                            uba=None,
-                            lbx=None,
-                            ubx=None,
-                            x0=None,
-                            lam_x0=None,
-                            lam_a0=None):
+                            g:cs.DM=None,
+                            lba:cs.DM=None,
+                            uba:cs.DM=None,
+                            lbx:cs.DM=None,
+                            ubx:cs.DM=None,
+                            x0:cs.DM=None,
+                            lam_x0:cs.DM=None,
+                            lam_a0:cs.DM=None):
         """
         This function solves the qp subproblem. Additionally some processing of
         the result is done and the statistics are saved. The input signature is
@@ -589,7 +591,7 @@ class FSLP_Method:
 
         return p_new
 
-    def __eval_grad_jac(self, step_accepted=False):
+    def __eval_grad_jac(self, step_accepted: bool=False):
         """ 
         Evaluate functions, gradient, jacobian at current iterate x_k.
 
@@ -610,7 +612,7 @@ class FSLP_Method:
                                                  self.lam_g_k,
                                                  self.lam_x_k)
 
-    def __eval_f(self, x):
+    def __eval_f(self, x:cs.DM):
         """
         Evaluates the objective function. And stores the statistics of it.
 
@@ -623,7 +625,7 @@ class FSLP_Method:
         self.stats['n_eval_f'] += 1
         return self.f_fun(x)
 
-    def __eval_g(self, x):
+    def __eval_g(self, x:cs.DM):
         """
         Evaluates the constraint function. And stores the statistics of it.
 
@@ -636,7 +638,7 @@ class FSLP_Method:
         self.stats['n_eval_g'] += 1
         return self.g_fun(x)
 
-    def __eval_grad_f(self, x):
+    def __eval_grad_f(self, x:cs.DM):
         """
         Evaluates the objective gradient function. And stores the statistics 
         of it.
@@ -651,7 +653,7 @@ class FSLP_Method:
         self.stats['n_eval_grad_f'] += 1
         return self.grad_f_fun(x)
 
-    def __eval_jac_g(self, x):
+    def __eval_jac_g(self, x:cs.DM):
         """
         Evaluates the constraint jacobian function. And stores the
         statistics of it.
@@ -666,7 +668,7 @@ class FSLP_Method:
         self.stats['n_eval_jac_g'] += 1
         return self.jac_g_fun(x)
 
-    def __eval_grad_lag(self, x, lam_g, lam_x):
+    def __eval_grad_lag(self, x:cs.DM, lam_g:cs.DM, lam_x:cs.DM):
         """
         Evaluates the gradient of the Lagrangian at x, lam_g, and lam_x.
         
@@ -681,7 +683,7 @@ class FSLP_Method:
         self.stats['n_eval_grad_lag'] += 1
         return self.grad_lag_fun(x, lam_g, lam_x)
 
-    def __eval_hess_l(self, x, lam_g, lam_x):
+    def __eval_hess_l(self, x:cs.DM, lam_g:cs.DM, lam_x:cs.DM):
         """
         Evaluates the Hessian of Lagrangian. And stores the statistics 
         of it.
@@ -755,7 +757,7 @@ class FSLP_Method:
                 self.slacks_zero_iter = self.n_iter
                 self.slacks_zero_n_eval_g = self.stats['n_eval_g']
 
-    def anderson_acc_init_memory(self, p, x):
+    def anderson_acc_init_memory(self, p:cs.DM, x:cs.DM):
         """
         Initializes the memory of the Anderson acceleration.
         p       the step to be stored
@@ -775,7 +777,7 @@ class FSLP_Method:
         self.anderson_memory_step[:, 0] = p
         self.anderson_memory_iterate[:, 0] = x
 
-    def anderson_acc_update_memory(self, p, x):
+    def anderson_acc_update_memory(self, p:cs.DM, x:cs.DM):
         """
         Update the memory of the Anderson acceleration.
         p       the step to be stored
@@ -795,7 +797,7 @@ class FSLP_Method:
         self.anderson_memory_step[:, 0] = p
         self.anderson_memory_iterate[:, 0] = x
 
-    def anderson_acc_step_update(self, p_curr, x_curr, j):
+    def anderson_acc_step_update(self, p_curr:cs.DM, x_curr:cs.DM, j:int):
         """
         This file does the Anderson step update
 
@@ -811,7 +813,6 @@ class FSLP_Method:
             # self.anderson_acc_update_memory(p_curr, x_curr)
         else:
             curr_stages = min(j, self.sz_anderson_memory)
-            # raise NotImplementedError('Not implemented yet')
 
             p_stack = cs.horzcat(p_curr, self.anderson_memory_step[:, 0:curr_stages])
             x_stack = cs.horzcat(x_curr, self.anderson_memory_iterate[:, 0:curr_stages])
@@ -829,7 +830,7 @@ class FSLP_Method:
         return x_plus
 
 
-    def feasibility_iterations(self, p):
+    def feasibility_iterations(self, p:cs.DM):
         """
         The feasibility iterations are performed here.
 
@@ -891,7 +892,7 @@ class FSLP_Method:
                 grad_L_tmp = self.__eval_grad_lag(self.x_tmp, lam_p_g_tmp, lam_p_x_tmp)
                 print('Gradient of Lagrangian: ', cs.norm_inf(grad_L_tmp))
                 # Do the gradient correction, could also be + instead of -??
-                grad_f_correction = grad_L_tmp - self.A_k.T @ lam_p_g_tmp - lam_p_x_tmp#self.tr_scale_mat_k.T @ lam_p_x_tmp
+                grad_f_correction = grad_L_tmp - self.A_k.T @ lam_p_g_tmp - lam_p_x_tmp
             else:
                 # Do just Zero-Order Iterations
                 if self.use_sqp:
@@ -909,11 +910,11 @@ class FSLP_Method:
             lba_correction = self.lbg - self.g_tmp
             uba_correction = self.ubg - self.g_tmp
 
-            grad_f_correction.to_file('gf_feas.mtx')
-            lba_correction.to_file('lba_correction.mtx')
-            uba_correction.to_file('uba_correction.mtx')
-            lb_var_correction.to_file('lb_var_correction.mtx')
-            ub_var_correction.to_file('ub_var_correction.mtx')
+            # grad_f_correction.to_file('gf_feas.mtx')
+            # lba_correction.to_file('lba_correction.mtx')
+            # uba_correction.to_file('uba_correction.mtx')
+            # lb_var_correction.to_file('lb_var_correction.mtx')
+            # ub_var_correction.to_file('ub_var_correction.mtx')
             
             (_,
             p_tmp,
@@ -927,19 +928,10 @@ class FSLP_Method:
                                                     lam_x0=lam_p_x_tmp,
                                                     lam_a0=lam_p_g_tmp)
 
-            p_tmp.to_file('dx_feas.mtx')
-            # p_tmp = self.__set_optimal_slack_step(self.x_tmp, p_tmp)
-            # p_tmp.to_file('p_tmp_minimalSlacks.mtx')
+            # p_tmp.to_file('dx_feas.mtx')
 
             self.step_inf_norm = cs.norm_inf(self.tr_scale_mat_k @ p_tmp)
 
-            # Old version of step update. Beware that here multiplier term is always zero because of wrong update!
-            # self.step_inf_norm = cs.fmax(cs.norm_inf(p_tmp),
-            #                              cs.fmax(
-            #                                  cs.norm_inf(
-            #                                      self.lam_tmp_g-self.lam_p_g_k),
-            #                                  cs.norm_inf(self.lam_tmp_x-
-            #                                              self.lam_p_x_k)))
 
             if self.use_anderson:
                 self.x_tmp = self.anderson_acc_step_update(p_tmp, self.x_tmp, j+1)
@@ -953,9 +945,9 @@ class FSLP_Method:
             kappa = self.step_inf_norm/self.prev_step_inf_norm
             kappas.append(kappa)
 
-            self.p_k.to_file('p_k.mtx')
-            self.x_tmp.to_file('x_tmp.mtx')
-            self.x_k.to_file('x_k.mtx')
+            # self.p_k.to_file('p_k.mtx')
+            # self.x_tmp.to_file('x_tmp.mtx')
+            # self.x_k.to_file('x_k.mtx')
 
             as_exac = cs.norm_2(
                 self.p_k - (self.x_tmp - self.x_k)) / cs.norm_2(self.p_k)
@@ -1000,7 +992,7 @@ class FSLP_Method:
 
         return self.x_tmp, lam_p_g_tmp, lam_p_x_tmp, inner_iter
 
-    def eval_m_k(self, p):
+    def eval_m_k(self, p:cs.DM):
         """
         In case of SQP:
         Evaluates the quadratic model of the objective function, i.e.,
@@ -1099,7 +1091,7 @@ class FSLP_Method:
 
         return cs.fmax(compl_g, compl_x)
 
-    def print_output(self, i):
+    def print_output(self, i:int):
         """
         This function prints the iteration output to the console.
 
@@ -1133,7 +1125,7 @@ class FSLP_Method:
                      tr_rad=np.array(self.tr_radii[-1]).squeeze(),
                      tr_ratio=np.array(self.rho_k).squeeze()))
 
-    def solve(self, problem_dict, init_dict, opts={}, callback=None):
+    def solve(self, problem_dict: dict, init_dict, opts:dict={}, callback=None):
         """
         Solve NLP with feasible SQP method.
 
@@ -1217,9 +1209,9 @@ class FSLP_Method:
         self.__check_slacks_zero()
         self.accepted_counter = 0
 
-        self.x_k.to_file('x0.mtx')
-        self.val_g_k.to_file('g0.mtx')
-        self.val_grad_f_k.to_file('gf0.mtx')
+        # self.x_k.to_file('x0.mtx')
+        # self.val_g_k.to_file('g0.mtx')
+        # self.val_grad_f_k.to_file('gf0.mtx')
 
         for i in range(self.max_iter):
             # Do the FSLP outer iterations here
@@ -1233,14 +1225,14 @@ class FSLP_Method:
 
             self.tr_radii.append(self.tr_rad_k)
 
-            self.g_k.to_file('gf.mtx')
-            self.lb_var_k.to_file('lb_var.mtx')
-            self.ub_var_k.to_file('ub_var.mtx')
-            self.lba_k.to_file('lba.mtx')
-            self.uba_k.to_file('uba.mtx')
-            if self.use_sqp:
-                self.H_k.to_file('Bk.mtx')
-            self.A_k.to_file('Jk.mtx')
+            # self.g_k.to_file('gf.mtx')
+            # self.lb_var_k.to_file('lb_var.mtx')
+            # self.ub_var_k.to_file('ub_var.mtx')
+            # self.lba_k.to_file('lba.mtx')
+            # self.uba_k.to_file('uba.mtx')
+            # if self.use_sqp:
+            #     self.H_k.to_file('Bk.mtx')
+            # self.A_k.to_file('Jk.mtx')
             
             (solve_success,
             self.p_k,
@@ -1266,7 +1258,7 @@ class FSLP_Method:
                 break
 
             # self.p_k = self.__set_optimal_slack_step(self.x_k, self.p_k)
-            self.p_k.to_file('dx.mtx')
+            # self.p_k.to_file('dx.mtx')
             self.m_k = self.eval_m_k(self.p_k)
 
             if cs.fabs(self.m_k) < self.optim_tol:
@@ -1278,15 +1270,6 @@ class FSLP_Method:
                 break
 
             self.step_inf_norm = cs.norm_inf(self.tr_scale_mat_k @ self.p_k)
-
-            # Old version of step inf norm!
-            # self.step_inf_norm = cs.fmax(
-            #     cs.norm_inf(self.p_k),
-            #     cs.fmax(
-            #         cs.norm_inf(self.lam_tmp_g-self.lam_p_g_k),
-            #         cs.norm_inf(self.lam_tmp_x-self.lam_p_x_k)
-            #     )
-            # )
 
             self.prev_step_inf_norm = self.step_inf_norm
             (self.x_k_correction,
@@ -1335,5 +1318,4 @@ class FSLP_Method:
         self.stats['accepted_iter'] = self.accepted_counter
         self.stats['iter_slacks_zero'] = self.slacks_zero_iter
         self.stats['n_eval_g_slacks_zero'] = self.slacks_zero_n_eval_g
-        # scalene_profiler.stop()
         return self.x_k, self.val_f_k
