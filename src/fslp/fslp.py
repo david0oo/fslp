@@ -298,31 +298,31 @@ class FSLP_Method:
                                             self.lagrangian,
                                             self.x)[0]])
 
-    def __initialize_stats(self):
-        """
-        Initializes the statistics of the problem.
-        """
-        self.stats = {}
-        # number of function evaluations
-        self.stats['n_eval_f'] = 0
-        # number of constraint evaluations
-        self.stats['n_eval_g'] = 0
-        # number of gradient of objective evaluations
-        self.stats['n_eval_grad_f'] = 0
-        # number of Jacobian of constraints evaluations
-        self.stats['n_eval_jac_g'] = 0
-        # number of Gradient of Lagrangian evaluations
-        self.stats['n_eval_grad_lag'] = 0
-        # number of Hessian of Lagrangian evaluations
-        self.stats['n_eval_hess_l'] = 0
-        # number of outer iterations
-        self.stats['iter_count'] = 0
-        # number of total inner iterations
-        self.stats['inner_iter'] = 0
-        # number of accepted outer iterations
-        self.stats['accepted_iter'] = 0
-        # convergence status of the FSLP algorithm
-        self.stats['success'] = False
+    # def __initialize_stats(self):
+    #     """
+    #     Initializes the statistics of the problem.
+    #     """
+    #     self.stats = {}
+    #     # number of function evaluations
+    #     self.stats['n_eval_f'] = 0
+    #     # number of constraint evaluations
+    #     self.stats['n_eval_g'] = 0
+    #     # number of gradient of objective evaluations
+    #     self.stats['n_eval_grad_f'] = 0
+    #     # number of Jacobian of constraints evaluations
+    #     self.stats['n_eval_jac_g'] = 0
+    #     # number of Gradient of Lagrangian evaluations
+    #     self.stats['n_eval_grad_lag'] = 0
+    #     # number of Hessian of Lagrangian evaluations
+    #     self.stats['n_eval_hess_l'] = 0
+    #     # number of outer iterations
+    #     self.stats['iter_count'] = 0
+    #     # number of total inner iterations
+    #     self.stats['inner_iter'] = 0
+    #     # number of accepted outer iterations
+    #     self.stats['accepted_iter'] = 0
+    #     # convergence status of the FSLP algorithm
+    #     self.stats['success'] = False
 
     def feasibility_measure(self, x: cs.DM, g_x: cs.DM):
         """
