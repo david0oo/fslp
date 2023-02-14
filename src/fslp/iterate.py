@@ -2,11 +2,17 @@
 Describes an outer iterate of the algorithm.
 """
 import casadi as cs
+import numpy as np
+from .input import Input
 
-class OuterIterate:
+class Iterate:
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, input: Input) -> None:
+        self.x_k = input.x0
+        self.lam_g_k = input.lam_g0
+        self.lam_x_k = input.lam_x0
+
+        self.infeasibility = self.feasibility_measure(self.x_k, self.g_k)
 
     def __eval_grad_jac(self, step_accepted: bool=False):
         """ 

@@ -7,7 +7,14 @@ import casadi as cs
 
 class Parameter:
 
-    def __init__(self) -> None:
+    def __init__(self, opts: dict):
+        """Initializes the parameters of the solver.
+
+        Raises:
+            KeyError: _description_
+            KeyError: _description_
+            KeyError: _description_
+        """
         if 'tr_rad0' in opts:
             self.tr_rad0 = opts['tr_rad0']
         else:

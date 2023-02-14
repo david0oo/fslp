@@ -1,8 +1,9 @@
 """ 
 Calculates the search direction of an iterate.
 """
+import casadi as cs
 
-class Direction:
+class OuterDirection:
 
     def __init__(self) -> None:
         pass

@@ -10,6 +10,8 @@ class Input:
         self.x = nlp_dict['x']
         self.nx = self.x.shape[0]
 
+        self.p = nlp_dict['p']
+
         # objective
         self.f = nlp_dict['f']
 
@@ -17,6 +19,11 @@ class Input:
         self.g = nlp_dict['g']
         self.ng = self.g.shape[0]
 
+        self.lam_g = cs.MX.sym('lam_g', self.ng)
+        self.lam_x = cs.MX.sym('lam_x', self.nx)
+
+
+        # ----------------- Refactor to different class -----------------
         if 'lbg' in initialization_dict:
             self.lbg = initialization_dict['lbg']
         else:
@@ -69,32 +76,5 @@ class Input:
         else:
             self.tr_scale_mat_inv0 = cs.inv(self.tr_scale_mat0)
 
-        self.lam_g = cs.MX.sym('lam_g', self.ng)
-        self.lam_x = cs.MX.sym('lam_x', self.nx)
 
-        self.jac_g = cs.jacobian(self.g, self.x)
-        self.grad_f = cs.gradient(self.f, self.x)
-        self.lagrangian = self.f + self.lam_g.T @ self.g +\
-            self.lam_x.T @ self.x
-
-        self.f_fun = cs.Function('f_fun', [self.x], [self.f])
-
-        self.grad_f_fun = cs.Function('grad_f_fun', [self.x], [self.grad_f])
-
-        self.g_fun = cs.Function('g_fun', [self.x], [self.g])
-
-        self.jac_g_fun = cs.Function('jac_g_fun', [self.x], [self.jac_g])
-
-        self.grad_lag_fun = cs.Function('grad_lag_fun',
-                                        [self.x, self.lam_g, self.lam_x],
-                                        [cs.gradient(self.lagrangian,
-                                                     self.x)])
-                                                    
-        if self.use_sqp and bool(opts) and 'hess_lag_fun' in opts:
-            self.hess_lag_fun = opts['hess_lag_fun']
-        else:
-            self.hess_lag_fun = cs.Function('hess_lag_fun',
-                                        [self.x, self.lam_g, self.lam_x],
-                                        [cs.hessian(
-                                            self.lagrangian,
-                                            self.x)[0]])
+        

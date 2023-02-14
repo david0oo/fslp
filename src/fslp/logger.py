@@ -6,7 +6,7 @@ class Logger:
     """
     Logger class that keeps track of interesting stats in the algorithm
     """
-    def __init__(self) -> None:
+    def __init__(self):
         """
         Constructor
         """
@@ -57,6 +57,3 @@ class Logger:
 
     def increment_inner_iteration_counter(self):
         self.inner_iteration_counter += 1
-
-    
-        
