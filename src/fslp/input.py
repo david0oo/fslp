@@ -61,20 +61,5 @@ class Input:
         else:
             self.lam_x0 = cs.DM.zeros(self.nx, 1)
 
-        if 'tr_rad0' in initialization_dict:
-            self.tr_rad0 = initialization_dict['tr_rad0']
-        else:
-            self.tr_rad0 = 1.0
-
-        if 'tr_scale_mat0' in initialization_dict:
-            self.tr_scale_mat0 = initialization_dict['tr_scale_mat0']
-        else:
-            self.tr_scale_mat0 = cs.DM.eye(self.nx)
-
-        if 'tr_scale_mat_inv0' in initialization_dict:
-            self.tr_scale_mat_inv0 = initialization_dict['tr_scale_mat_inv0']
-        else:
-            self.tr_scale_mat_inv0 = cs.inv(self.tr_scale_mat0)
-
 
         

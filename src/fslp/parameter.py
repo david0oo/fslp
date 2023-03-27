@@ -40,10 +40,6 @@ class Parameter:
         else:
             self.feas_tol = 1e-8
 
-        if 'testproblem_obj' in opts:
-            self.testproblem_obj = opts['testproblem_obj']
-        else:
-            self.testproblem_obj = None
 
         # Trust Region parameters
         if bool(opts) and 'tr_eta1' in opts:
@@ -111,21 +107,6 @@ class Parameter:
         else:
             self.gradient_correction = False
 
-        if bool(opts) and 'opt_check_slacks' in opts:
-            self.opt_check_slacks = opts['opt_check_slacks']
-        else:
-            self.opt_check_slacks = False
-
-        if self.opt_check_slacks:
-            if bool(opts) and 'n_slacks_start' in opts:
-                self.n_slacks_start = opts['n_slacks_start']
-            else:
-                raise KeyError('Entry n_slacks_start not specified in opts!')
-
-            if bool(opts) and 'n_slacks_end' in opts:
-                self.n_slacks_end = opts['n_slacks_end']
-            else:
-                raise KeyError('Entry n_slacks_end not specified in opts!')
 
         if bool(opts) and 'solver_type' in opts:
             if not opts['solver_type'] in ['SLP', 'SQP']:
@@ -133,6 +114,15 @@ class Parameter:
             self.solver_type = opts['solver_type']
         else:
             self.solver_type = 'SLP'
+        if bool(opts) and 'use_anderson' in opts:
+            self.use_anderson = opts['use_anderson']
+        else:
+            self.use_anderson = False
+
+        if bool(opts) and 'anderson_memory' in opts:
+            self.sz_anderson_memory = opts['anderson_memory']
+        else:
+            self.sz_anderson_memory = 1
 
         if self.solver_type == 'SQP':
             print("SOLVING PROBLEM WITH SQP!\n")
@@ -140,7 +130,6 @@ class Parameter:
         else:
             print("SOLVING PROBLEM WITH SLP!\n")
             self.use_sqp = False
-
 
         self.subproblem_sol_opts = {}
         if bool(opts) and 'subproblem_sol' in opts and opts['subproblem_sol'] != 'ipopt':
@@ -177,13 +166,24 @@ class Parameter:
         else:
             self.subproblem_sol_opts['error_on_fail'] = False
 
-        # -----------------------------------------------------------
-        if bool(opts) and 'use_anderson' in opts:
-            self.use_anderson = opts['use_anderson']
+        if bool(opts) and 'opt_check_slacks' in opts:
+            self.opt_check_slacks = opts['opt_check_slacks']
         else:
-            self.use_anderson = False
+            self.opt_check_slacks = False
 
-        if bool(opts) and 'anderson_memory' in opts:
-            self.sz_anderson_memory = opts['anderson_memory']
+        if self.opt_check_slacks:
+            if bool(opts) and 'n_slacks_start' in opts:
+                self.n_slacks_start = opts['n_slacks_start']
+            else:
+                raise KeyError('Entry n_slacks_start not specified in opts!')
+
+        if bool(opts) and 'n_slacks_end' in opts:
+            self.n_slacks_end = opts['n_slacks_end']
         else:
-            self.sz_anderson_memory = 1
+            raise KeyError('Entry n_slacks_end not specified in opts!')
+
+        if 'testproblem_obj' in opts:
+            self.testproblem_obj = opts['testproblem_obj']
+        else:
+            self.testproblem_obj = None
+        # -----------------------------------------------------------

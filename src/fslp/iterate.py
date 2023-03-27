@@ -1,39 +1,45 @@
-""" 
-Describes an outer iterate of the algorithm.
+"""
+This file defines the parent class iterate
 """
 import casadi as cs
 import numpy as np
 from .input import Input
+from .functionEvaluator import FunctionEvaluator
+from .parameter import Parameter
+from .logger import Logger
+
 
 class Iterate:
 
-    def __init__(self, input: Input) -> None:
+    def __init__(self,
+                 input: Input,
+                 parameter: Parameter,
+                 log: Logger,
+                 functionEvaluator: FunctionEvaluator):
+        """
+        Constructor.
+        """
+        # Store initial points
         self.x_k = input.x0
         self.lam_g_k = input.lam_g0
         self.lam_x_k = input.lam_x0
+        self.p = input.p
 
+        # Evaluate functions
+        self.f_k = functionEvaluator.__eval_f(self.x_k, self.p, log)
+        self.g_k = functionEvaluator.__eval_g(self.x_k, self.p, log)
+        self.grad_f_k = functionEvaluator.__eval_gradient_f(self.x_k, self.p, log)
+        self.jac_g_k = functionEvaluator.__eval_jacobian_g(self.x_k, self.p, log)
+
+        if parameter.use_sqp:
+            self.hess_lag_k = functionEvaluator.__eval_hessian_lagrangian(self.x_k, self.p, self.lam_g_k, log)
+
+
+        # Calculate current infeasibility
         self.infeasibility = self.feasibility_measure(self.x_k, self.g_k)
 
-    def __eval_grad_jac(self, step_accepted: bool=False):
-        """ 
-        Evaluate functions, gradient, jacobian at current iterate x_k.
-
-        Args:
-            step_accepted (bool, optional): Denotes if previous step was
-            accepted. In an accepted step the gradient of the constraints do
-            not need to be re-evaluated. Defaults to False.
-        """
-        self.val_f_k = self.__eval_f(self.x_k)
-        if step_accepted:
-            self.val_g_k = self.g_tmp
-        else:
-            self.val_g_k = self.__eval_g(self.x_k)
-        self.val_grad_f_k = self.__eval_grad_f(self.x_k)
-        self.val_jac_g_k = self.__eval_jac_g(self.x_k)
-        if self.use_sqp:
-            self.hess_lag_k = self.__eval_hess_l(self.x_k,
-                                                 self.lam_g_k,
-                                                 self.lam_x_k)
+        # Use this for scaling
+        self.regularization_factor = 0
 
     def __complementarity_condition(self):
         """
@@ -58,7 +64,7 @@ class Iterate:
 
         return cs.fmax(compl_g, compl_x)
 
-    def feasibility_measure(self, x: cs.DM, g_x: cs.DM):
+    def feasibility_measure(self, x: cs.DM, g_x: cs.DM, input: Input):
         """
         The feasibility measure in the l-\\infty norm.
 
@@ -69,8 +75,8 @@ class Iterate:
         Returns:
             double: the feasibility in the l-\\infty norm
         """
-        return np.array(cs.norm_inf(cs.vertcat(
-                        cs.fmax(0, self.lbg-g_x),
-                        cs.fmax(0, g_x-self.ubg),
-                        cs.fmax(0, self.lbx-x),
-                        cs.fmax(0, x-self.ubx)))).squeeze()
+        return float(cs.norm_inf(cs.vertcat(
+                        cs.fmax(0, input.lbg-g_x),
+                        cs.fmax(0, g_x-input.ubg),
+                        cs.fmax(0, input.lbx-x),
+                        cs.fmax(0, x-input.ubx))))

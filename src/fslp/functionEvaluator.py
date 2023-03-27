@@ -33,7 +33,7 @@ class FunctionEvaluator:
 
         # ----------------------- still needs some refactoring here -----------
 
-        if self.use_sqp and bool(opts) and 'hess_lag_fun' in opts:
+        if input.use_sqp and 'hess_lag_fun' in opts:
             self.hess_lag_fun = opts['hess_lag_fun']
         else:
             one = cs.MX.sym('one', 1)
@@ -57,7 +57,7 @@ class FunctionEvaluator:
         log.increment_n_eval_f()
         return self.f_casadi_function(x, p)
 
-    def __eval_g(self, x: cs.DM, p: cs.DM, log:Logger):
+    def __eval_g(self, x: cs.DM, p: cs.DM, log: Logger):
         """
         Evaluates the constraint function. And stores the statistics of it.
 
@@ -70,7 +70,7 @@ class FunctionEvaluator:
         log.increment_n_eval_g()
         return self.g_casadi_function(x, p)
 
-    def __eval_gradient_f(self, x:cs.DM, p: cs.DM, log:Logger):
+    def __eval_gradient_f(self, x: cs.DM, p: cs.DM, log: Logger):
         """
         Evaluates the objective gradient function. And stores the statistics 
         of it.
@@ -100,7 +100,12 @@ class FunctionEvaluator:
         log.increment_n_eval_jacobian_g()
         return self.jac_g_casadi_function(x, p)
 
-    def __eval_gradient_lagrangian(self, x:cs.DM, p: cs.DM, lam_g:cs.DM, lam_x:cs.DM, log:Logger):
+    def __eval_gradient_lagrangian(self, 
+                                   x: cs.DM, 
+                                   p: cs.DM, 
+                                   lam_g: cs.DM, 
+                                   lam_x: cs.DM, 
+                                   log:Logger):
         """
         Evaluates the gradient of the Lagrangian at x, lam_g, and lam_x.
         
