@@ -1,39 +1,54 @@
 """
-This file is used as a function evaluator. All the functions given as input
-are evaluated in this class
+This function contains all the necessary input given to the solver
 """
 import casadi as cs
 from .logger import Logger
-from .nlp_problem import NLPProblem
+from .options import Options
 
-class FunctionEvaluator:
 
-    def __init__(self, nlp: NLPProblem) -> None:
-        """ 
-        Constructor of the class. All necessary functions are created here.
-        """
+class NLPProblem:
 
-        self.jac_g = cs.jacobian(input.g, input.x)
-        self.grad_f = cs.gradient(input.f, input.x)
-        self.lagrangian = input.f + input.lam_g.T @ input.g +\
-            input.lam_x.T @ input.x
+    def __init__(self, nlp_dict: dict, initialization_dict: dict, opts: Options) -> None:
+        
+        # ---------------- Symbolic Expressions ----------------
+        # primal variables
+        self.x = nlp_dict['x']
+        # parameter
+        self.p = nlp_dict['p']
+        # objective
+        self.f = nlp_dict['f']
+        # constraints
+        self.g = nlp_dict['g']
 
-        self.f_casadi_function = cs.Function('f_fun', [input.x, input.p], [input.f])
+        self.number_variables = self.x.shape[0]
+        self.number_constraints = self.g.shape[0]
 
-        self.grad_f_casadi_function = cs.Function('grad_f_fun', [input.x, input.p], [self.grad_f])
+        # constraint multipliers
+        self.lam_g = cs.MX.sym('lam_g', self.number_constraints)
+        # bound constraint multipliers
+        self.lam_x = cs.MX.sym('lam_x', self.number_variables)
 
-        self.g_casadi_function = cs.Function('g_fun', [input.x, input.x], [input.g])
+        self.jacobian_g = cs.jacobian(self.g, self.x)
+        self.gradient_f = cs.gradient(self.f, self.x)
+        self.lagrangian = self.f + self.lam_g.T @ self.g +\
+            self.lam_x.T @ self.x
 
-        self.jac_g_casadi_function = cs.Function('jac_g_fun', [input.x, input.p], [self.jac_g])
+        self.f_function = cs.Function('f_fun', [self.x, self.p], [self.f])
 
-        self.grad_lag_casadi_function = cs.Function('grad_lag_fun',
-                                        [input.x, input.p, input.lam_g, input.lam_x],
+        self.grad_f_function = cs.Function('grad_f_fun', [self.x, self.p], [self.gradient_f])
+
+        self.g_function = cs.Function('g_fun', [self.x, self.x], [self.g])
+
+        self.jac_g_function = cs.Function('jac_g_fun', [self.x, self.p], [self.jacobian_g])
+
+        self.grad_lag_function = cs.Function('grad_lag_fun',
+                                        [self.x, self.p, self.lam_g, self.lam_x],
                                         [cs.gradient(self.lagrangian,
-                                                     input.x)])
+                                                     self.x)])
 
         # ----------------------- still needs some refactoring here -----------
 
-        if input.use_sqp and 'hess_lag_fun' in opts:
+        if opts.use_sqp and 'hess_lag_fun' in opts:
             self.hess_lag_fun = opts['hess_lag_fun']
         else:
             one = cs.MX.sym('one', 1)
@@ -43,6 +58,45 @@ class FunctionEvaluator:
                                             self.lagrangian,
                                             input.x)[0]])
 
+
+
+        # ----------------- Bounds of problem ----------------------------
+        if 'lbg' in initialization_dict:
+            self.lbg = initialization_dict['lbg']
+        else:
+            self.lbg = -cs.inf*cs.DM.ones(self.ng, 1)
+
+        if 'ubg' in initialization_dict:
+            self.ubg = initialization_dict['ubg']
+        else:
+            self.ubg = cs.inf*cs.DM.ones(self.ng, 1)
+
+        # Variable bounds
+        if 'lbx' in initialization_dict:
+            self.lbx = initialization_dict['lbx']
+        else:
+            self.lbx = -cs.inf*cs.DM.ones(self.nx, 1)
+
+        if 'ubx' in initialization_dict:
+            self.ubx = initialization_dict['ubx']
+        else:
+            self.ubx = cs.inf*cs.DM.ones(self.nx, 1)
+
+        # Define iterative variables
+        if 'x0' in initialization_dict:
+            self.x0 = initialization_dict['x0']
+        else:
+            self.x0 = cs.DM.zeros(self.nx, 1)
+
+        if 'lam_g0' in initialization_dict:
+            self.lam_g0 = initialization_dict['lam_g0']
+        else:
+            self.lam_g0 = cs.DM.zeros(self.ng, 1)
+
+        if 'lam_x0' in initialization_dict:
+            self.lam_x0 = initialization_dict['lam_x0']
+        else:
+            self.lam_x0 = cs.DM.zeros(self.nx, 1)
 
     def __eval_f(self, x: cs.DM, p: cs.DM, log: Logger):
         """
@@ -55,7 +109,7 @@ class FunctionEvaluator:
             Casadi DM scalar: the value of f at the given x.
         """
         log.increment_n_eval_f()
-        return self.f_casadi_function(x, p)
+        return self.f_function(x, p)
 
     def __eval_g(self, x: cs.DM, p: cs.DM, log: Logger):
         """
@@ -68,7 +122,7 @@ class FunctionEvaluator:
             _type_: _description_
         """
         log.increment_n_eval_g()
-        return self.g_casadi_function(x, p)
+        return self.g_function(x, p)
 
     def __eval_gradient_f(self, x: cs.DM, p: cs.DM, log: Logger):
         """
@@ -83,7 +137,7 @@ class FunctionEvaluator:
            Casadi DM vector: the value of g at the given x.
         """
         log.increment_n_eval_gradient_f()
-        return self.grad_f_casadi_function(x, p)
+        return self.grad_f_function(x, p)
 
     def __eval_jacobian_g(self, x:cs.DM, p: cs.DM, log:Logger):
         """
@@ -98,7 +152,7 @@ class FunctionEvaluator:
             Casadi DM vector: the value of g at the given x.
         """
         log.increment_n_eval_jacobian_g()
-        return self.jac_g_casadi_function(x, p)
+        return self.jac_g_function(x, p)
 
     def __eval_gradient_lagrangian(self, 
                                    x: cs.DM, 
@@ -118,7 +172,7 @@ class FunctionEvaluator:
             Casadi DM vector: the value of gradient of Lagrangian
         """
         log.increment_n_eval_gradient_lagrangian()
-        return self.grad_lag_casadi_function(x, p, lam_g, lam_x)
+        return self.grad_lag_function(x, p, lam_g, lam_x)
 
     def __eval_hessian_lagrangian(self, x:cs.DM, p: cs.DM, lam_g:cs.DM, log:Logger):
         """

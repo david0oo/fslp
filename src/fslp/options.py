@@ -5,7 +5,7 @@ Programming solver
 import casadi as cs
 
 
-class Parameter:
+class Options:
 
     def __init__(self, opts: dict):
         """Initializes the parameters of the solver.
@@ -39,7 +39,6 @@ class Parameter:
             self.feas_tol = opts['feas_tol']
         else:
             self.feas_tol = 1e-8
-
 
         # Trust Region parameters
         if bool(opts) and 'tr_eta1' in opts:

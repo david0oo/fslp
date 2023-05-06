@@ -7,7 +7,7 @@ from .input import Input
 from .functionEvaluator import FunctionEvaluator
 from .parameter import Parameter
 from .logger import Logger
-
+from .direction import Direction
 
 class Iterate:
 
@@ -80,3 +80,5 @@ class Iterate:
                         cs.fmax(0, g_x-input.ubg),
                         cs.fmax(0, input.lbx-x),
                         cs.fmax(0, x-input.ubx))))
+    
+    def update_primal_variables(self, direction: Direction):

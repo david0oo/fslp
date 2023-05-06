@@ -2,6 +2,7 @@
 A logger class thats keeps track of the iterates.    
 """
 
+
 class Logger:
     """
     Logger class that keeps track of interesting stats in the algorithm
