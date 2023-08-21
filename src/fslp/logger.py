@@ -2,7 +2,6 @@
 A logger class thats keeps track of the iterates.    
 """
 
-
 class Logger:
     """
     Logger class that keeps track of interesting stats in the algorithm
@@ -11,6 +10,9 @@ class Logger:
         """
         Constructor
         """
+        self.reset()
+        
+    def reset(self):
         # number of function evaluations
         self.n_eval_f = 0
         # number of constraint evaluations
@@ -31,6 +33,7 @@ class Logger:
         self.accepted_iterations = 0
         # convergence status of the FSLP algorithm
         self.optimization_success = False
+
 
     def increment_n_eval_f(self):
         self.n_eval_f += 1

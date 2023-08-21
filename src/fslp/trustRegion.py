@@ -5,8 +5,35 @@ import casadi as cs
 
 class TrustRegion:
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, tr_rad0: cs.DM) -> None:
+        
+        self.radius = tr_rad0
+        self.f_corrected_iterate = None
+
+
+    def eval_m_k(self, p:cs.DM):
+        """
+        In case of SQP:
+        Evaluates the quadratic model of the objective function, i.e.,
+        m_k(x_k; p) = grad_f_k.T @ p + p.T @ H_k @ p
+        H_k denotes the Hessian Approximation
+
+        In case of SLP:
+        Evaluates the linear model of the objective function, i.e.,
+        m_k(x_k; p) = grad_f_k.T @ p. This model is used in the termination
+        criterion.
+
+        Args:
+            p (Casadi DM vector): the search direction where the linear model
+                                  should be evaluated
+
+        Returns:
+            double: the value of the linear model at the given direction p.
+        """
+        if self.use_sqp:
+            return self.val_grad_f_k.T @ p + 0.5 * p.T @ self.H_k @ p
+        else:
+            return self.val_grad_f_k.T @ p
 
     def eval_trust_region_ratio(self):
         """

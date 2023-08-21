@@ -3,12 +3,11 @@ This function contains all the necessary input given to the solver
 """
 import casadi as cs
 from .logger import Logger
-from .options import Options
 
 
 class NLPProblem:
 
-    def __init__(self, nlp_dict: dict, initialization_dict: dict, opts: Options) -> None:
+    def __init__(self, nlp_dict: dict, opts: dict):
         
         # ---------------- Symbolic Expressions ----------------
         # primal variables
@@ -22,6 +21,7 @@ class NLPProblem:
 
         self.number_variables = self.x.shape[0]
         self.number_constraints = self.g.shape[0]
+        self.number_parameters = self.p.shape[0]
 
         # constraint multipliers
         self.lam_g = cs.MX.sym('lam_g', self.number_constraints)
@@ -35,11 +35,13 @@ class NLPProblem:
 
         self.f_function = cs.Function('f_fun', [self.x, self.p], [self.f])
 
-        self.grad_f_function = cs.Function('grad_f_fun', [self.x, self.p], [self.gradient_f])
+        self.grad_f_function = cs.Function('grad_f_fun', [self.x, self.p], 
+                                            [self.gradient_f])
 
         self.g_function = cs.Function('g_fun', [self.x, self.x], [self.g])
 
-        self.jac_g_function = cs.Function('jac_g_fun', [self.x, self.p], [self.jacobian_g])
+        self.jac_g_function = cs.Function('jac_g_fun', [self.x, self.p], 
+                                          [self.jacobian_g])
 
         self.grad_lag_function = cs.Function('grad_lag_fun',
                                         [self.x, self.p, self.lam_g, self.lam_x],
@@ -59,44 +61,27 @@ class NLPProblem:
                                             input.x)[0]])
 
 
-
         # ----------------- Bounds of problem ----------------------------
-        if 'lbg' in initialization_dict:
-            self.lbg = initialization_dict['lbg']
+        if 'lbg' in nlp_dict:
+            self.lbg = nlp_dict['lbg']
         else:
-            self.lbg = -cs.inf*cs.DM.ones(self.ng, 1)
+            self.lbg = -cs.inf*cs.DM.ones(self.number_constraints, 1)
 
-        if 'ubg' in initialization_dict:
-            self.ubg = initialization_dict['ubg']
+        if 'ubg' in nlp_dict:
+            self.ubg = nlp_dict['ubg']
         else:
-            self.ubg = cs.inf*cs.DM.ones(self.ng, 1)
+            self.ubg = cs.inf*cs.DM.ones(self.number_constraints, 1)
 
         # Variable bounds
-        if 'lbx' in initialization_dict:
-            self.lbx = initialization_dict['lbx']
+        if 'lbx' in nlp_dict:
+            self.lbx = nlp_dict['lbx']
         else:
-            self.lbx = -cs.inf*cs.DM.ones(self.nx, 1)
+            self.lbx = -cs.inf*cs.DM.ones(self.number_variables, 1)
 
-        if 'ubx' in initialization_dict:
-            self.ubx = initialization_dict['ubx']
+        if 'ubx' in nlp_dict:
+            self.ubx = nlp_dict['ubx']
         else:
-            self.ubx = cs.inf*cs.DM.ones(self.nx, 1)
-
-        # Define iterative variables
-        if 'x0' in initialization_dict:
-            self.x0 = initialization_dict['x0']
-        else:
-            self.x0 = cs.DM.zeros(self.nx, 1)
-
-        if 'lam_g0' in initialization_dict:
-            self.lam_g0 = initialization_dict['lam_g0']
-        else:
-            self.lam_g0 = cs.DM.zeros(self.ng, 1)
-
-        if 'lam_x0' in initialization_dict:
-            self.lam_x0 = initialization_dict['lam_x0']
-        else:
-            self.lam_x0 = cs.DM.zeros(self.nx, 1)
+            self.ubx = cs.inf*cs.DM.ones(self.number_variables, 1)
 
     def __eval_f(self, x: cs.DM, p: cs.DM, log: Logger):
         """

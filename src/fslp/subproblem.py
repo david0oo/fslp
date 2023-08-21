@@ -3,7 +3,7 @@ This class determines what subproblem is solved. Either QP or LP
 """
 import casadi as cs
 import numpy as np
-from .parameter import Parameter
+from .options import Parameter
 
 class Subproblem:
 
