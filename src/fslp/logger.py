@@ -13,6 +13,8 @@ class Logger:
         self.reset()
         
     def reset(self):
+        # Solver success
+        self.solver_success = False
         # number of function evaluations
         self.n_eval_f = 0
         # number of constraint evaluations
@@ -28,12 +30,24 @@ class Logger:
         # number of outer iterations
         self.iteration_counter = 0
         # number of total inner iterations
-        self.inner_iteration_counter = 0
+        self.feasibility_iteration_counter = 0
         # number of accepted outer iterations
-        self.accepted_iterations = 0
+        self.accepted_iterations_counter = 0
         # convergence status of the FSLP algorithm
         self.optimization_success = False
-
+        # List of iterates et cetera
+        self.tr_radii = []
+        self.inner_iters = []
+        self.inner_feas = []
+        self.inner_as_exac = []
+        self.inner_kappas = []
+        self.inner_steps = []
+        self.asymptotic_exactness = []
+        self.list_iter = []
+        self.list_feas = []
+        self.list_times = []
+        self.list_mks = []
+        self.list_grad_lag = []
 
     def increment_n_eval_f(self):
         self.n_eval_f += 1

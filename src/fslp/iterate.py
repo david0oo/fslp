@@ -1,36 +1,35 @@
 """
 This file defines the parent class iterate
 """
+# Import standard libraries
 import casadi as cs
 import numpy as np
+# Import self-written libraries
 from .nlp_problem import NLPProblem
 from .options import Options
 from .logger import Logger
 from .direction import Direction
+from .trustRegion import TrustRegion
+
 
 class Iterate:
 
     def __init__(self,
-                 input: NLPProblem,
-                 parameter: Options,
-                 log: Logger):
+                 problem: NLPProblem):
         """
         Constructor.
         """
-        # Store initial points
-        # self.x_k = input.x0
-        # self.lam_g_k = input.lam_g0
-        # self.lam_x_k = input.lam_x0
-        # self.p = input.p
+        self.number_variables = problem.number_variables
+        self.number_constraints = problem.number_constraints
+        self.number_parameters = problem.number_parameters
 
-        self.number_variables = input.number_variables
-        self.number_constraints = input.number_constraints
-        self.number_parameters = input.number_parameters
+        # Initialize x, lam_g, lam_x, ....
+        # self.__initialize(initialization_dict, problem, log)
 
-        # Use this for scaling
-        self.regularization_factor = 0
-
-    def __initialize(self, initialization_dict: dict, nlp_problem:NLPProblem, log:Logger):
+    def initialize(self,
+                     initialization_dict: dict,
+                     problem: NLPProblem,
+                     log:Logger):
 
         # Define iterative variables
         if 'x0' in initialization_dict:
@@ -48,42 +47,45 @@ class Iterate:
         else:
             self.lam_x_k = cs.DM.zeros(self.number_variables, 1)
 
-        if 'p' in initialization_dict:
-            self.p = initialization_dict['p']
-        else:
-            self.p = cs.DM(self.number_parameters, 1)
+        # Initialize the inner iterates as well
+        self.x_inner_iterates = cs.DM.zeros(problem.number_variables)
+        self.lam_x_inner_iterates = cs.DM.zeros(problem.number_variables)
+        self.lam_g_inner_iterates = cs.DM.zeros(problem.number_constraints)
 
+        self.evaluate_quantities(problem, log)
 
-    def evaluate_quantities(self, nlp_problem: NLPProblem, log: Logger, parameter: Options)
+    def evaluate_quantities(self,
+                            nlp_problem: NLPProblem,
+                            log: Logger,
+                            parameter: Options):
         
         # Evaluate functions
-        self.f_k = nlp_problem.__eval_f(self.x_k, self.p, log)
-        self.g_k = nlp_problem.__eval_g(self.x_k, self.p, log)
-        self.grad_f_k = nlp_problem.__eval_gradient_f(self.x_k, self.p, log)
-        self.jac_g_k = nlp_problem.__eval_jacobian_g(self.x_k, self.p, log)
+        self.f_k = nlp_problem.eval_f(self.x_k, log)
+        self.g_k = nlp_problem.eval_g(self.x_k, log)
+        self.gradient_f_k = nlp_problem.eval_gradient_f(self.x_k, log)
+        self.jacobian_g_k = nlp_problem.eval_jacobian_g(self.x_k, log)
 
         if parameter.use_sqp:
-            self.hess_lag_k = nlp_problem.__eval_hessian_lagrangian(self.x_k, self.p, self.lam_g_k, log)
+            self.hessian_lagrangian_k = nlp_problem.eval_hessian_lagrangian(self.x_k, self.lam_g_k, log)
 
         # Calculate current infeasibility
         self.infeasibility = self.feasibility_measure(self.x_k, self.g_k)
 
-
-    def __complementarity_condition(self):
+    def complementarity_condition(self, problem: NLPProblem):
         """
         Calculate inf-norm of the complementarity condition.
         """
 
-        pre_compl_g = cs.fmin(cs.fabs(self.lbg - self.val_g_k),
-                              cs.fabs(self.val_g_k - self.ubg))
+        pre_compl_g = cs.fmin(cs.fabs(problem.lbg - self.g_k),
+                              cs.fabs(self.g_k - self.problem))
         # is this sufficient?? because if there is no constraint we should not
         # care about it
         pre_compl_g[list(np.nonzero(pre_compl_g == cs.inf)[0])] = 0
 
         compl_g = cs.mmax(pre_compl_g * self.lam_g_k)
 
-        pre_compl_x = cs.fmin(cs.fabs(self.lbx - self.x_k),
-                              cs.fabs(self.x_k - self.ubx))
+        pre_compl_x = cs.fmin(cs.fabs(problem.lbx - self.x_k),
+                              cs.fabs(self.x_k - problem.ubx))
 
         # same here. Is this sufficient??
         pre_compl_x[list(np.nonzero(pre_compl_x == cs.inf)[0])] = 0
@@ -92,7 +94,10 @@ class Iterate:
 
         return cs.fmax(compl_g, compl_x)
 
-    def feasibility_measure(self, x: cs.DM, g_x: cs.DM, nlp_problem: NLPProblem):
+    def feasibility_measure(self,
+                            x: cs.DM,
+                            g_x: cs.DM,
+                            nlp_problem: NLPProblem):
         """
         The feasibility measure in the l-\\infty norm.
 
@@ -109,6 +114,7 @@ class Iterate:
                         cs.fmax(0, nlp_problem.lbx-x),
                         cs.fmax(0, x-nlp_problem.ubx))))
     
+
     # def __eval_grad_jac(self, step_accepted: bool=False):
     #     """ 
     #     Evaluate functions, gradient, jacobian at current iterate x_k.
@@ -130,9 +136,12 @@ class Iterate:
     #                                              self.lam_g_k,
     #                                              self.lam_x_k)
 
-
-    def update_primal_variables(self, direction: Direction):
+    def step_update(self, step_acceptable: bool, ):
         """
         Args:
             direction (Direction): _description_
         """ 
+        if step_acceptable:
+            self.x_k = self.x_k_correction
+            self.lam_x_k = self.lam_p_x_k
+            self.lam_g_k = self.lam_p_g_k

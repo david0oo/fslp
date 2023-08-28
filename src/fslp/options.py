@@ -16,9 +16,9 @@ class Options:
             KeyError: _description_
         """
         if 'tr_rad0' in opts:
-            self.tr_rad0 = opts['tr_rad0']
+            self.tr_radius0 = opts['tr_rad0']
         else:
-            self.tr_rad0 = 1.0
+            self.tr_radius0 = 1.0
 
         if 'tr_scale_mat0' in opts:
             self.tr_scale_mat0 = opts['tr_scale_mat0']
@@ -31,14 +31,14 @@ class Options:
             self.tr_scale_mat_inv0 = cs.inv(self.tr_scale_mat0)
 
         if bool(opts) and 'optim_tol' in opts:
-            self.optim_tol = opts['optim_tol']
+            self.optimality_tol = opts['optim_tol']
         else:
-            self.optim_tol = 1e-8
+            self.optimality_tol = 1e-8
 
         if bool(opts) and 'feas_tol' in opts:
-            self.feas_tol = opts['feas_tol']
+            self.feasibility_tol = opts['feas_tol']
         else:
-            self.feas_tol = 1e-8
+            self.feasibility_tol = 1e-8
 
         # Trust Region parameters
         if bool(opts) and 'tr_eta1' in opts:
@@ -106,7 +106,6 @@ class Options:
         else:
             self.gradient_correction = False
 
-
         if bool(opts) and 'solver_type' in opts:
             if not opts['solver_type'] in ['SLP', 'SQP']:
                 raise KeyError('The only allowed types are SLP or SQP!!')
@@ -159,7 +158,6 @@ class Options:
             self.subproblem_sol_opts['verbose'] = True
             self.subproblem_sol_opts["print_time"] = False
 
-
         if bool(opts) and 'error_on_fail' in opts:
             self.subproblem_sol_opts['error_on_fail'] = opts['error_on_fail']
         else:
@@ -186,3 +184,23 @@ class Options:
         else:
             self.testproblem_obj = None
         # -----------------------------------------------------------
+        # Regularization of Hessian
+        if 'regularize' in opts:
+            self.regularize = opts['regularize']
+        else:
+            self.regularize = False
+
+        if 'regularization_factor_min' in opts:
+            self.regularization_factor_min = opts['regularization_factor_min']
+        else:
+            self.regularization_factor_min = 1e-4
+
+        if 'regularization_factor_max' in opts:
+            self.regularization_factor_max = opts['regularization_factor_max']
+        else:
+            self.regularization_factor_max = 10000
+
+        if 'regularization_factor_increase' in opts:
+            self.regularization_factor_increase = opts['regularization_factor_increase']
+        else:
+            self.regularization_factor_increase = 10
