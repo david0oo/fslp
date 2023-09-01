@@ -6,29 +6,29 @@ import casadi as cs
 import numpy as np
 from timeit import default_timer as timer
 # Import self-written libraries
-from .nlp_problem import NLPProblem
-from .options import Options
-from .logger import Logger
-from .output import Output
-from .direction import Direction
-from .iterate import Iterate
-from .trustRegion import TrustRegion
-from .subproblem import Subproblem
+from fslp.nlp_problem import NLPProblem
+from fslp.options import Options
+from fslp.logger import Logger
+from fslp.output import Output
+from fslp.iterate import Iterate
+from fslp.direction import Direction
+from fslp.trustRegion import TrustRegion
+from fslp.subproblem import Subproblem
 
 cs.DM.set_precision(16)
 
 
 class FSLP:
 
-    def __init__(self, nlp_dict: dict, initialization_dict: dict, opts: dict):
+    def __init__(self, nlp_dict: dict, opts: dict):
         """
         The constructor. More variables are set and initialized in specific
         functions below.
         """
         # First setup the options properly
-        self.options = Options(opts)
+        self.options = Options(nlp_dict, opts)
         # Setup NLP
-        self.nlp_problem = NLPProblem(nlp_dict, initialization_dict, self.options)
+        self.nlp_problem = NLPProblem(nlp_dict, self.options)
         self.log = Logger()
         self.output = Output()
 
@@ -40,7 +40,7 @@ class FSLP:
         self.iterate = Iterate(self.nlp_problem)
 
         self.trust_region = TrustRegion(self.options)
-        self.subproblem = Subproblem(self.options)
+        self.subproblem = Subproblem(self.nlp_problem, self.options, self.iterate)
 
         # self.subproblem_solver = None
         # self.solver_type = 'SLP'
@@ -78,9 +78,9 @@ class FSLP:
         self.log.reset()
         
         # self.__eval_grad_jac()
-        self.iterate.initialize(init_dict, self.nlp_problem, self.logger)
+        self.iterate.initialize(init_dict, self.nlp_problem, self.options, self.log)
 
-        if self.iterate.feasibility_measure > self.options.feasibility_tol:
+        if self.iterate.infeasibility > self.options.feasibility_tol:
             raise ValueError('Initial guess needs to be feasible!!')
         # if self.feasibility_measure(self.x_k, self.val_g_k) > self.feas_tol:
         #     raise ValueError('Initial guess needs to be feasible!!')
@@ -128,14 +128,21 @@ class FSLP:
         # self.list_grad_lag = []
 
         self.log.iteration_counter = 0
-        self.__check_slacks_zero()
+        self.log.tr_radii.append(self.trust_region.tr_radius_k)
+        self.log.inner_iters.append(0)
+        # self.__check_slacks_zero()
         self.log.accepted_iterations_counter = 0
 
         for i in range(self.options.max_iter):
             # Do the FSLP outer iterations here
             # print iteration here
             if self.options.verbose:
-                self.output.print_output(i)
+                self.output.print_output(i,
+                                         self.iterate,
+                                         self.direction,
+                                         self.nlp_problem,
+                                         self.trust_region,
+                                         self.log)
 
             # self.n_iter = i + 1
             self.log.increment_iteration_counter()
@@ -143,7 +150,6 @@ class FSLP:
             self.lam_tmp_g = self.iterate.lam_g_k
             self.lam_tmp_x = self.iterate.lam_x_k
 
-            self.log.tr_radii.append(self.tr_rad_k)
             
             # Solve the LP / QP -----------------------------------------------
             solver_dict = {}
@@ -194,7 +200,7 @@ class FSLP:
             (self.x_k_correction,
                 self.lam_p_g_k,
                 self.lam_p_x_k,
-                self.feas_iter) = self.feasibility_iterations(self.p_k)
+                self.feas_iter) = self.feasibility_iterations()
 
             # ------------- Trust-region iterations ---------------------------
             if not self.kappa_acceptance:
@@ -203,9 +209,9 @@ class FSLP:
                     print('Rejected inner iterates or asymptotic exactness')
                 self.tr_rad_k = 0.5*cs.norm_inf(self.trust_region.tr_scale_mat_k @ self.direction.d_k)
             else:
-                self.trust_region.eval_trust_region_ratio()
-                self.trust_region.tr_update()
-                step_accepted = self.trust_region.step_acceptable()
+                self.trust_region.eval_trust_region_ratio(self.iterate, self.direction, self.nlp_problem, self.log)
+                self.trust_region.tr_update(self.direction, self.options)
+                step_accepted = self.trust_region.step_acceptable(self.options)
 
             self.iterate.step_update(step_accepted)
 
@@ -214,7 +220,7 @@ class FSLP:
                 self.log.list_grad_lag.append(
                     np.array(cs.norm_inf(
                         self.nlp_problem.gradient_lagrangian_function(
-                            self.iterate.x_k, self.iterate.lam_g_k, self.iterate.lam_x_k))).squeeze())
+                            self.iterate.x_k, self.iterate.p, cs.DM([1]), self.iterate.lam_g_k, self.iterate.lam_x_k))).squeeze())
                 self.log.list_iter.append(self.iterate.x_k)
                 if self.options.verbose:
                     print('ACCEPTED')
@@ -233,6 +239,7 @@ class FSLP:
                 if self.options.verbose:
                     print('REJECTED')
 
+            self.log.tr_radii.append(self.trust_region.tr_radius_k)
             self.direction.prepare_subproblem_bounds_variables(self.trust_region, self.iterate, self.nlp_problem)
 
         # Max_iter reached or optimal solution found
@@ -245,7 +252,8 @@ class FSLP:
         self.stats['accepted_iter'] = self.accepted_counter
         self.stats['iter_slacks_zero'] = self.slacks_zero_iter
         self.stats['n_eval_g_slacks_zero'] = self.slacks_zero_n_eval_g
-        return self.x_k, self.val_f_k
+
+        return self.iterate.x_k, self.iterate.f_k, self.iterate.lam_g_k, self.iterate.lam_x_k
 
     def feasibility_iterations(self):
         """
@@ -269,7 +277,7 @@ class FSLP:
             self.anderson_acceleration.init_memory(self.direction.d_inner_iterates, self.iterate.x_k)
 
         self.iterate.x_inner_iterates = self.iterate.x_k + self.direction.d_inner_iterates
-        self.g_tmp = self.nlp_problem.eval_g(self.iterate.x_inner_iterates)
+        self.g_tmp = self.nlp_problem.eval_g(self.iterate.x_inner_iterates, self.iterate.p, self.log)
 
         self.kappa_acceptance = False
 
@@ -277,8 +285,8 @@ class FSLP:
         asymptotic_exactness = []
         as_exac = cs.norm_2(
                 self.direction.d_k - self.iterate.x_inner_iterates + self.iterate.x_k) / cs.norm_2(self.direction.d_k)
-        self.prev_infeas = self.iterate.feasibility_measure(self.iterate.x_inner_iterates, self.g_tmp)
-        self.curr_infeas = self.iterate.feasibility_measure(self.iterate.x_inner_iterates, self.g_tmp)
+        self.prev_infeas = self.iterate.feasibility_measure(self.iterate.x_inner_iterates, self.g_tmp, self.nlp_problem)
+        self.curr_infeas = self.iterate.feasibility_measure(self.iterate.x_inner_iterates, self.g_tmp, self.nlp_problem)
         feasibilities = [self.prev_infeas]
         step_norms = []
         kappas = []
@@ -318,14 +326,14 @@ class FSLP:
             if self.options.use_sqp:
                 grad_f_correction = self.iterate.gradient_f_k + self.direction.H_k @ (self.iterate.x_inner_iterates - self.iterate.x_k)
             else:
-                grad_f_correction = self.self.iterate.gradient_f_k
+                grad_f_correction = self.iterate.gradient_f_k
             
-            lb_var_correction = cs.fmax(-self.trust_region.tr_rad_k*self.trust_region.tr_scale_mat_inv_k @
+            lb_var_correction = cs.fmax(-self.trust_region.tr_radius_k*self.trust_region.tr_scale_mat_inv_k @
                           cs.DM.ones(self.nlp_problem.number_variables, 1) - self.iterate.x_inner_iterates+self.iterate.x_k,
                           self.nlp_problem.lbx - self.iterate.x_inner_iterates)
-            ub_var_correction = cs.fmin(self.tr_rad_k*self.trust_region.tr_scale_mat_inv_k @
+            ub_var_correction = cs.fmin(self.trust_region.tr_radius_k*self.trust_region.tr_scale_mat_inv_k @
                           cs.DM.ones(self.nlp_problem.number_variables, 1) - self.iterate.x_inner_iterates+self.iterate.x_k,
-                          self.nlp_problem.ubx - self.x_tmp)
+                          self.nlp_problem.ubx - self.iterate.x_inner_iterates)
 
             lba_correction = self.nlp_problem.lbg - self.g_tmp
             uba_correction = self.nlp_problem.ubg - self.g_tmp
@@ -347,7 +355,7 @@ class FSLP:
             (_,
             self.direction.d_inner_iterates,
             self.direction.lam_d_inner_iterates,
-            self.direction.lam_a_inner_iterates) = self.solve_subproblem(solver_dict)
+            self.direction.lam_a_inner_iterates) = self.subproblem.solve_subproblem(solver_dict)
 
             self.step_inf_norm = cs.norm_inf(self.trust_region.tr_scale_mat_k @ self.direction.d_inner_iterates)
 
@@ -356,11 +364,11 @@ class FSLP:
                 self.iterate.x_inner_iterates = self.anderson_acceleration.step_update(self.direction.d_inner_iterates, self.iterate.x_inner_iterates, j+1)
             else:
                 self.iterate.x_inner_iterates = self.iterate.x_inner_iterates + self.direction.d_inner_iterates
-            self.g_tmp = self.__eval_g(self.x_tmp)  # x_tmp = x_{tmp-1} + p_tmp
+            self.g_tmp = self.nlp_problem.eval_g(self.iterate.x_inner_iterates,self.iterate.p, self.log)  # x_tmp = x_{tmp-1} + p_tmp
 
 
             # ------------ termination heuristic ------------------------------
-            self.curr_infeas = self.iterate.feasibility_measure(self.iterate.x_inner_iterates, self.g_tmp)
+            self.curr_infeas = self.iterate.feasibility_measure(self.iterate.x_inner_iterates, self.g_tmp, self.nlp_problem)
             self.prev_infeas = self.curr_infeas
 
             kappa = self.step_inf_norm/self.prev_step_inf_norm
@@ -371,8 +379,8 @@ class FSLP:
                 self.direction.d_k - (self.iterate.x_inner_iterates - self.iterate.x_k)) / cs.norm_2(self.direction.d_k)
             if self.options.verbose:
                 print("Kappa: ", kappa,
-                      "Infeasibility", self.feasibility_measure(
-                                self.iterate.x_inner_iterates, self.g_tmp),
+                      "Infeasibility", self.iterate.feasibility_measure(
+                                self.iterate.x_inner_iterates, self.g_tmp, self.nlp_problem),
                       "Asymptotic Exactness: ", as_exac)
 
             # +1 excludes the first iteration from the kappa test
@@ -392,7 +400,7 @@ class FSLP:
                 accumulated_as_ex = 0
 
             feasibilities.append(
-                self.iterate.feasibility_measure(self.iterate.x_inner_iterates, self.g_tmp))
+                self.iterate.feasibility_measure(self.iterate.x_inner_iterates, self.g_tmp, self.nlp_problem))
             asymptotic_exactness.append(as_exac)
             step_norms.append(cs.norm_inf(self.direction.d_inner_iterates))
 
@@ -408,4 +416,4 @@ class FSLP:
         self.log.inner_kappas.append(kappas)
         self.log.asymptotic_exactness.append(as_exac)
 
-        return #self.x_tmp, lam_p_g_tmp, lam_p_x_tmp, inner_iter
+        return self.iterate.x_inner_iterates, self.iterate.lam_g_inner_iterates, self.iterate.lam_x_inner_iterates, inner_iter

@@ -2,12 +2,15 @@
 This class determines what subproblem is solved. Either QP or LP
 """
 # Import standard libraries
+from __future__ import annotations # <-still need this.
+from typing import TYPE_CHECKING
 import casadi as cs
 import numpy as np
 # Import self-written libraries
-from .options import Options
-from .nlp_problem import NLPProblem
-from .iterate import Iterate
+if TYPE_CHECKING:
+    from .options import Options
+    from .nlp_problem import NLPProblem
+    from .iterate import Iterate
 
 
 class Subproblem:
@@ -22,11 +25,12 @@ class Subproblem:
         # self.subproblem_sol_opts["dump_in"] = True
         # self.subproblem_sol_opts["dump_out"] = True
         # self.subproblem_sol_opts["dump"] = True
-        A_placeholder = problem.jacobian_g_function(iterate.x_k)
+        A_placeholder = problem.jacobian_g_function(iterate.x_k, iterate.p)
         if self.use_sqp:
             B_placeholder = problem.hessian_lagrangian_function(iterate.x_k,
-                                                                iterate.lam_g_k,
-                                                                iterate.lam_x_k)
+                                                                iterate.p,
+                                                                1.0,
+                                                                iterate.lam_g_k)
 
             qp_struct = {   'h': B_placeholder.sparsity(),
                             'a': A_placeholder.sparsity()}
@@ -35,17 +39,17 @@ class Subproblem:
             # qp_struct["h"].to_file("h.mtx")
             # qp_struct["a"].to_file("a.mtx")
             # print(self.subproblem_sol_opts)
-            self.subproblem_solver = cs.conic(  "qpsol",
-                                                self.subproblem_sol,
+            self.subproblem_solver = cs.conic(  "qpsolver",
+                                                parameters.subproblem_solver_name,
                                                 qp_struct,
-                                                self.subproblem_sol_opts)
+                                                parameters.subproblem_solver_opts)
         else:
             lp_struct = {'a': A_placeholder.sparsity()}
             
-            self.subproblem_solver = cs.conic(  "qpsol",
-                                                self.subproblem_sol,
+            self.subproblem_solver = cs.conic(  "lpsolver",
+                                                parameters.subproblem_solver_name,
                                                 lp_struct,
-                                                self.subproblem_sol_opts)
+                                                parameters.subproblem_solver_opts)
 
     # def __create_subproblem_solver(self):
     #     """

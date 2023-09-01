@@ -3,14 +3,17 @@ This file handles the output of the Feasible Sequential Linear/Quadratic
 Programming solver
 """
 # Import standard libraries
+from __future__ import annotations # <-still need this.
+from typing import TYPE_CHECKING
 import casadi as cs
 import numpy as np
 # Import self-written libraries
-from .iterate import Iterate
-from .direction import Direction
-from .nlp_problem import NLPProblem
-from .logger import Logger
-from .trustRegion import TrustRegion
+if TYPE_CHECKING:
+    from fslp.iterate import Iterate
+    from fslp.direction import Direction
+    from fslp.nlp_problem import NLPProblem
+    from fslp.logger import Logger
+    from fslp.trustRegion import TrustRegion
 
 
 class Output:
@@ -59,17 +62,17 @@ class Output:
                "{compl:^10.4e} | {f_x:^10.4f} | {lam_g:^13.4e} | "
                "{lam_x:^13.4e} | {feas_it:^9} | {tr_rad:^13.5e} | "
                "{tr_ratio:^10.8f}").format(
-                     iter=i, m_k=np.array(direction.m_k).squeeze(),
-                     grad_lag=np.array(cs.norm_inf(
+                     iter=i, m_k=float(direction.m_k),
+                     grad_lag=float(cs.norm_inf(
                          problem.eval_gradient_lagrangian(
-                             iterate.x_k, iterate.lam_g_k, iterate.lam_x_k, log))).squeeze(),
-                     compl=np.array(
-                         iterate.complementarity_condition(problem)).squeeze(),
-                     f_x=np.array(iterate.f_k).squeeze(),
-                     lam_g=np.array(cs.norm_inf(iterate.lam_g_k)).squeeze(),
-                     lam_x=np.array(cs.norm_inf(iterate.lam_x_k)).squeeze(),
-                     feas=iterate.infeasibility,
-                     feas_it=log.inner_iters,
-                     tr_rad=np.array(log.tr_radii[-1]).squeeze(),
-                     tr_ratio=np.array(tr.rho_k).squeeze()))
+                             iterate.x_k, iterate.p, cs.DM([1.0]), iterate.lam_g_k, iterate.lam_x_k, log))),
+                     compl=float(
+                         iterate.complementarity_condition(problem)),
+                     f_x=float(iterate.f_k),
+                     lam_g=float(cs.norm_inf(iterate.lam_g_k)),
+                     lam_x=float(cs.norm_inf(iterate.lam_x_k)),
+                     feas=float(iterate.infeasibility),
+                     feas_it=int(log.inner_iters[-1]),
+                     tr_rad=float(log.tr_radii[-1]),
+                     tr_ratio=float(tr.tr_ratio)))
         

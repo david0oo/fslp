@@ -1,11 +1,14 @@
 # Import standard libraries
+from __future__ import annotations  # <-still need this.
+from typing import TYPE_CHECKING
 import casadi as cs
 import numpy as np
 # Import self-written libraries
-from .nlp_problem import NLPProblem
-from .iterate import Iterate
-from .options import Options
-from .trustRegion import TrustRegion
+if TYPE_CHECKING:
+    from fslp.nlp_problem import NLPProblem
+    from fslp.iterate import Iterate
+    from fslp.options import Options
+    from fslp.trustRegion import TrustRegion
 
 
 class Direction:
@@ -101,8 +104,8 @@ class Direction:
         and the trust-region needs to be taken into account as well.
         """
         self.lbd_k = cs.fmax(-tr.tr_radius_k*tr.tr_scale_mat_inv_k @
-                             cs.DM.ones(self.nx, 1), problem.lbx - iterate.x_k)
+                             cs.DM.ones(problem.number_variables, 1), problem.lbx - iterate.x_k)
         self.ubd_k = cs.fmin(tr.tr_radius_k*tr.tr_scale_mat_inv_k @
-                             cs.DM.ones(self.nx, 1), problem.ubx - iterate.x_k)
+                             cs.DM.ones(problem.number_variables, 1), problem.ubx - iterate.x_k)
 
     

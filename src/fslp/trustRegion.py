@@ -1,12 +1,15 @@
 """
 This file is used for the trust-region update in the solver
 """
+from __future__ import annotations # <-still need this.
+from typing import TYPE_CHECKING
 import casadi as cs
-from .options import Options
-from .direction import Direction
-from .iterate import Iterate
-from .nlp_problem import NLPProblem
-from .logger import Logger
+if TYPE_CHECKING:
+    from fslp.options import Options
+    from fslp.direction import Direction
+    from fslp.iterate import Iterate
+    from fslp.nlp_problem import NLPProblem
+    from fslp.logger import Logger
 
 
 class TrustRegion:
@@ -63,7 +66,7 @@ class TrustRegion:
         p_k is the solution of the original QP
         p_k_correction comes from the feasibility iterations
         """
-        f_correction = problem.eval_f(self.x_k_correction)
+        f_correction = problem.eval_f(iterate.x_inner_iterates, iterate.p, log)
         log.list_mks.append(float(cs.fabs(direction.m_k)))
         if (iterate.f_k - f_correction) <= 0:
             print('ared is negative')
@@ -77,13 +80,13 @@ class TrustRegion:
         """
         # Adjust the trust-region radius
         if self.tr_ratio < opts.tr_eta1:
-            self.tr_rad_k = opts.tr_alpha1 * \
+            self.tr_radius_k = opts.tr_alpha1 * \
                 cs.norm_inf(self.tr_scale_mat_k @ direction.d_k)
         elif self.tr_ratio > opts.tr_eta2 and\
                 cs.fabs(cs.norm_inf(
-                self.tr_scale_mat_k @ direction.p_k) - self.tr_rad_k) < opts.tr_tol:
-            self.tr_rad_k = cs.fmin(
-                opts.tr_alpha2*self.tr_rad_k, opts.tr_rad_max)
+                self.tr_scale_mat_k @ direction.d_k) - self.tr_radius_k) < opts.tr_tol:
+            self.tr_radius_k = cs.fmin(
+                opts.tr_alpha2*self.tr_radius_k, opts.tr_radius_max)
         # else: keep the trust-region radius
 
     def step_acceptable(self, opts: Options):

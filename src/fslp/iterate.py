@@ -2,14 +2,17 @@
 This file defines the parent class iterate
 """
 # Import standard libraries
+from __future__ import annotations # <-still need this.
+from typing import TYPE_CHECKING
 import casadi as cs
 import numpy as np
 # Import self-written libraries
-from .nlp_problem import NLPProblem
-from .options import Options
-from .logger import Logger
-from .direction import Direction
-from .trustRegion import TrustRegion
+if TYPE_CHECKING:
+    from fslp.nlp_problem import NLPProblem
+    from fslp.options import Options
+    from fslp.logger import Logger
+# from fslp.direction import Direction
+# from fslp.trustRegion import TrustRegion
 
 
 class Iterate:
@@ -23,36 +26,38 @@ class Iterate:
         self.number_constraints = problem.number_constraints
         self.number_parameters = problem.number_parameters
 
+        self.x_k = cs.DM.zeros(self.number_variables, 1)
+        self.lam_g_k = cs.DM.zeros(self.number_constraints, 1)
+        self.lam_x_k = cs.DM.zeros(self.number_variables, 1)
+        self.p = cs.DM.zeros(self.number_parameters, 1)
         # Initialize x, lam_g, lam_x, ....
         # self.__initialize(initialization_dict, problem, log)
 
     def initialize(self,
                      initialization_dict: dict,
                      problem: NLPProblem,
+                     options: Options,
                      log:Logger):
 
         # Define iterative variables
         if 'x0' in initialization_dict:
             self.x_k = initialization_dict['x0']
-        else:
-            self.x_k = cs.DM.zeros(self.number_variables, 1)
 
         if 'lam_g0' in initialization_dict:
             self.lam_g_k = initialization_dict['lam_g0']
-        else:
-            self.lam_g_k = cs.DM.zeros(self.number_constraints, 1)
 
         if 'lam_x0' in initialization_dict:
             self.lam_x_k = initialization_dict['lam_x0']
-        else:
-            self.lam_x_k = cs.DM.zeros(self.number_variables, 1)
+
+        if 'p0' in initialization_dict:
+            self.p = initialization_dict['p0']
 
         # Initialize the inner iterates as well
         self.x_inner_iterates = cs.DM.zeros(problem.number_variables)
         self.lam_x_inner_iterates = cs.DM.zeros(problem.number_variables)
         self.lam_g_inner_iterates = cs.DM.zeros(problem.number_constraints)
 
-        self.evaluate_quantities(problem, log)
+        self.evaluate_quantities(problem, log, options)
 
     def evaluate_quantities(self,
                             nlp_problem: NLPProblem,
@@ -60,16 +65,16 @@ class Iterate:
                             parameter: Options):
         
         # Evaluate functions
-        self.f_k = nlp_problem.eval_f(self.x_k, log)
-        self.g_k = nlp_problem.eval_g(self.x_k, log)
-        self.gradient_f_k = nlp_problem.eval_gradient_f(self.x_k, log)
-        self.jacobian_g_k = nlp_problem.eval_jacobian_g(self.x_k, log)
+        self.f_k = nlp_problem.eval_f(self.x_k, self.p, log)
+        self.g_k = nlp_problem.eval_g(self.x_k, self.p, log) 
+        self.gradient_f_k = nlp_problem.eval_gradient_f(self.x_k, self.p, log)
+        self.jacobian_g_k = nlp_problem.eval_jacobian_g(self.x_k, self.p, log)
 
         if parameter.use_sqp:
-            self.hessian_lagrangian_k = nlp_problem.eval_hessian_lagrangian(self.x_k, self.lam_g_k, log)
+            self.hessian_lagrangian_k = nlp_problem.eval_hessian_lagrangian(self.x_k, self.p, cs.DM([1]), self.lam_g_k, log)
 
         # Calculate current infeasibility
-        self.infeasibility = self.feasibility_measure(self.x_k, self.g_k)
+        self.infeasibility = self.feasibility_measure(self.x_k, self.g_k, nlp_problem)
 
     def complementarity_condition(self, problem: NLPProblem):
         """
@@ -77,7 +82,7 @@ class Iterate:
         """
 
         pre_compl_g = cs.fmin(cs.fabs(problem.lbg - self.g_k),
-                              cs.fabs(self.g_k - self.problem))
+                              cs.fabs(self.g_k - problem.ubg))
         # is this sufficient?? because if there is no constraint we should not
         # care about it
         pre_compl_g[list(np.nonzero(pre_compl_g == cs.inf)[0])] = 0
@@ -142,6 +147,6 @@ class Iterate:
             direction (Direction): _description_
         """ 
         if step_acceptable:
-            self.x_k = self.x_k_correction
-            self.lam_x_k = self.lam_p_x_k
-            self.lam_g_k = self.lam_p_g_k
+            self.x_k = self.x_inner_iterates
+            self.lam_x_k = self.lam_x_inner_iterates
+            self.lam_g_k = self.lam_g_inner_iterates

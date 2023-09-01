@@ -7,7 +7,7 @@ import casadi as cs
 
 class Options:
 
-    def __init__(self, opts: dict):
+    def __init__(self, nlp_dict: dict, opts: dict):
         """Initializes the parameters of the solver.
 
         Raises:
@@ -23,7 +23,7 @@ class Options:
         if 'tr_scale_mat0' in opts:
             self.tr_scale_mat0 = opts['tr_scale_mat0']
         else:
-            self.tr_scale_mat0 = cs.DM.eye(self.nx)
+            self.tr_scale_mat0 = cs.DM.eye(nlp_dict['x'].shape[0])
 
         if 'tr_scale_mat_inv0' in opts:
             self.tr_scale_mat_inv0 = opts['tr_scale_mat_inv0']
@@ -71,10 +71,10 @@ class Options:
         else:
             self.tr_acceptance = 1e-8
 
-        if bool(opts) and 'tr_rad_max' in opts:
-            self.tr_rad_max = opts['tr_rad_max']
+        if bool(opts) and 'tr_radius_max' in opts:
+            self.tr_radius_max = opts['tr_radius_max']
         else:
-            self.tr_rad_max = 10.0
+            self.tr_radius_max = 10.0
 
         if bool(opts) and 'max_iter' in opts:
             self.max_iter = opts['max_iter']
@@ -125,24 +125,22 @@ class Options:
             print("SOLVING PROBLEM WITH SLP!\n")
             self.use_sqp = False
 
-        self.subproblem_sol_opts = {}
-        if bool(opts) and 'subproblem_sol' in opts and opts['subproblem_sol'] != 'ipopt':
-            self.subproblem_sol = opts['subproblem_sol']
+        if bool(opts) and 'subproblem_solver' in opts:
+            self.subproblem_solver_name = opts['subproblem_solver']
         else:
             if self.use_sqp:
-                self.subproblem_sol = 'qpoases'
+                self.subproblem_solver_name = 'qpoases'
             else:
-                self.subproblem_sol = 'highs'
+                self.subproblem_solver_name = 'highs'
 
-        if bool(opts) and 'subproblem_sol_opts' in opts\
-                and opts['subproblem_sol'] != 'ipopt':
-            self.subproblem_sol_opts.update(opts['subproblem_sol_opts'])
+        self.subproblem_solver_opts = {}
+        if bool(opts) and 'subproblem_solver_opts' in opts:
+            self.subproblem_solver_opts.update(opts['subproblem_solver_opts'])
         else:
             # Needs to be nlpsol_options
-            self.subproblem_sol_opts = {}
-            self.subproblem_sol_opts['verbose'] = True
-            self.subproblem_sol_opts["print_time"] = False
-            self.subproblem_sol_opts['error_on_fail'] = False
+            self.subproblem_solver_opts['verbose'] = True
+            self.subproblem_solver_opts["print_time"] = False
+            self.subproblem_solver_opts['error_on_fail'] = False
 
         if bool(opts) and 'opt_check_slacks' in opts:
             self.opt_check_slacks = opts['opt_check_slacks']
@@ -155,10 +153,10 @@ class Options:
             else:
                 raise KeyError('Entry n_slacks_start not specified in opts!')
 
-        if bool(opts) and 'n_slacks_end' in opts:
-            self.n_slacks_end = opts['n_slacks_end']
-        else:
-            raise KeyError('Entry n_slacks_end not specified in opts!')
+            if bool(opts) and 'n_slacks_end' in opts:
+                self.n_slacks_end = opts['n_slacks_end']
+            else:
+                raise KeyError('Entry n_slacks_end not specified in opts!')
 
         if 'testproblem_obj' in opts:
             self.testproblem_obj = opts['testproblem_obj']
@@ -185,4 +183,3 @@ class Options:
             self.regularization_factor_increase = opts['regularization_factor_increase']
         else:
             self.regularization_factor_increase = 10
-            

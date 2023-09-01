@@ -2,20 +2,27 @@
 This function contains all the necessary input given to the solver
 """
 # Import standard libraries
+from __future__ import annotations # <-still need this.
+from typing import TYPE_CHECKING
 import casadi as cs
 # Import self-written libraries
-from .logger import Logger
-from .options import Options
+if TYPE_CHECKING:
+    from .logger import Logger
+    from .options import Options
+
 
 class NLPProblem:
 
-    def __init__(self, nlp_dict: dict, initialization_dict: dict, opts: Options):
+    def __init__(self, nlp_dict: dict, opts: Options):
         
         # ---------------- Symbolic Expressions ----------------
         # primal variables
         self.x = nlp_dict['x']
         # parameter
-        self.p = nlp_dict['p']
+        if 'p' in nlp_dict:
+            self.p = nlp_dict['p']
+        else:
+            self.p = cs.MX.sym('p', 0)
         # objective
         self.f = nlp_dict['f']
         # constraints
@@ -29,10 +36,11 @@ class NLPProblem:
         self.lam_g = cs.MX.sym('lam_g', self.number_constraints)
         # bound constraint multipliers
         self.lam_x = cs.MX.sym('lam_x', self.number_variables)
+        self.one = cs.MX.sym('one', 1)
 
         self.jacobian_g = cs.jacobian(self.g, self.x)
         self.gradient_f = cs.gradient(self.f, self.x)
-        self.lagrangian = self.f + self.lam_g.T @ self.g +\
+        self.lagrangian = self.one*self.f + self.lam_g.T @ self.g +\
             self.lam_x.T @ self.x
 
         self.f_function = cs.Function('f_fun', [self.x, self.p], [self.f])
@@ -46,7 +54,7 @@ class NLPProblem:
                                           [self.jacobian_g])
 
         self.gradient_lagrangian_function = cs.Function('grad_lag_fun',
-                                                        [self.x, self.p, self.lam_g, self.lam_x],
+                                                        [self.x, self.p, self.one, self.lam_g, self.lam_x],
                                                         [cs.gradient(self.lagrangian, self.x)])
 
         # ----------------------- still needs some refactoring here -----------
@@ -54,12 +62,11 @@ class NLPProblem:
         if opts.use_sqp and 'hess_lag_fun' in opts:
             self.hessian_lagrangian_function = opts['hess_lag_fun']
         else:
-            one = cs.MX.sym('one', 1)
             self.hessian_lagrangian_function = cs.Function('hess_lag_fun',
-                                        [self.x, self.p, one, self.lam_g],
+                                        [self.x, self.p, self.one, self.lam_g],
                                         [cs.hessian(
                                             self.lagrangian,
-                                            input.x)[0]])
+                                            self.x)[0]])
 
     def initialize(self, init_dict: dict):
         """
@@ -87,9 +94,7 @@ class NLPProblem:
         else:
             self.ubx = cs.inf*cs.DM.ones(self.number_variables, 1)
 
-        self.parameter = init_dict['p0']
-
-    def eval_f(self, x: cs.DM, log: Logger):
+    def eval_f(self, x: cs.DM, p: cs.DM, log: Logger):
         """
         Evaluates the objective function. And stores the statistics of it.
 
@@ -100,9 +105,9 @@ class NLPProblem:
             Casadi DM scalar: the value of f at the given x.
         """
         log.increment_n_eval_f()
-        return self.f_function(x, self.parameter)
+        return self.f_function(x, p)
 
-    def eval_g(self, x: cs.DM, log: Logger):
+    def eval_g(self, x: cs.DM, p: cs.DM, log: Logger):
         """
         Evaluates the constraint function. And stores the statistics of it.
 
@@ -113,9 +118,9 @@ class NLPProblem:
             _type_: _description_
         """
         log.increment_n_eval_g()
-        return self.g_function(x, self.parameter)
+        return self.g_function(x, p)
 
-    def eval_gradient_f(self, x: cs.DM, log: Logger):
+    def eval_gradient_f(self, x: cs.DM, p: cs.DM, log: Logger):
         """
         Evaluates the objective gradient function. And stores the statistics 
         of it.
@@ -128,9 +133,9 @@ class NLPProblem:
            Casadi DM vector: the value of g at the given x.
         """
         log.increment_n_eval_gradient_f()
-        return self.gradient_f_function(x, self.parameter)
+        return self.gradient_f_function(x, p)
 
-    def eval_jacobian_g(self, x: cs.DM, log: Logger):
+    def eval_jacobian_g(self, x: cs.DM, p: cs.DM, log: Logger):
         """
         Evaluates the constraint jacobian function. And stores the
         statistics of it.
@@ -143,10 +148,12 @@ class NLPProblem:
             Casadi DM vector: the value of g at the given x.
         """
         log.increment_n_eval_jacobian_g()
-        return self.jacobian_g_function(x, self.parameter)
+        return self.jacobian_g_function(x, p)
 
     def eval_gradient_lagrangian(self, 
-                                   x: cs.DM, 
+                                   x: cs.DM,
+                                   p: cs.DM,
+                                   one: cs.DM,
                                    lam_g: cs.DM, 
                                    lam_x: cs.DM, 
                                    log:Logger):
@@ -162,10 +169,12 @@ class NLPProblem:
             Casadi DM vector: the value of gradient of Lagrangian
         """
         log.increment_n_eval_gradient_lagrangian()
-        return self.gradient_lagrangian_function(x, self.parameter, lam_g, lam_x)
+        return self.gradient_lagrangian_function(x, p, one, lam_g, lam_x)
 
     def eval_hessian_lagrangian(self,
                                 x: cs.DM,
+                                p: cs.DM,
+                                one: cs.DM,
                                 lam_g: cs.DM,
                                 log: Logger):
         """
@@ -173,4 +182,4 @@ class NLPProblem:
         of it.
         """
         log.increment_n_eval_hessian_lagrangian()
-        return self.hessian_lagrangian_function(x, self.parameter, 1, lam_g)
+        return self.hessian_lagrangian_function(x, p, one, lam_g)
