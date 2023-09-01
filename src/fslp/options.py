@@ -30,13 +30,13 @@ class Options:
         else:
             self.tr_scale_mat_inv0 = cs.inv(self.tr_scale_mat0)
 
-        if bool(opts) and 'optim_tol' in opts:
-            self.optimality_tol = opts['optim_tol']
+        if bool(opts) and 'optimality_tol' in opts:
+            self.optimality_tol = opts['optimality_tol']
         else:
             self.optimality_tol = 1e-8
 
-        if bool(opts) and 'feas_tol' in opts:
-            self.feasibility_tol = opts['feas_tol']
+        if bool(opts) and 'feasibility_tol' in opts:
+            self.feasibility_tol = opts['feasibility_tol']
         else:
             self.feasibility_tol = 1e-8
 
@@ -101,17 +101,13 @@ class Options:
         else:
             self.verbose = True
 
-        if bool(opts) and 'gradient_correction' in opts:
-            self.gradient_correction = opts['gradient_correction']
-        else:
-            self.gradient_correction = False
-
         if bool(opts) and 'solver_type' in opts:
             if not opts['solver_type'] in ['SLP', 'SQP']:
                 raise KeyError('The only allowed types are SLP or SQP!!')
             self.solver_type = opts['solver_type']
         else:
             self.solver_type = 'SLP'
+
         if bool(opts) and 'use_anderson' in opts:
             self.use_anderson = opts['use_anderson']
         else:
@@ -133,34 +129,19 @@ class Options:
         if bool(opts) and 'subproblem_sol' in opts and opts['subproblem_sol'] != 'ipopt':
             self.subproblem_sol = opts['subproblem_sol']
         else:
-            self.subproblem_sol = 'nlpsol'
-            self.subproblem_sol_opts['nlpsol'] = 'ipopt'
+            if self.use_sqp:
+                self.subproblem_sol = 'qpoases'
+            else:
+                self.subproblem_sol = 'highs'
 
         if bool(opts) and 'subproblem_sol_opts' in opts\
                 and opts['subproblem_sol'] != 'ipopt':
             self.subproblem_sol_opts.update(opts['subproblem_sol_opts'])
         else:
-            opts = {
-                'ipopt': {'print_level': 0,
-                          'sb': 'yes',
-                          'fixed_variable_treatment': 'make_constraint',
-                          'hessian_constant': 'yes',
-                          'jac_c_constant': 'yes',
-                          'jac_d_constant': 'yes',
-                          'tol': 1e-12,
-                          'tiny_step_tol': 1e-20,
-                          'mumps_scaling': 0,
-                          'honor_original_bounds': 'no',
-                          'bound_relax_factor': 0},
-                'print_time': False}
             # Needs to be nlpsol_options
-            self.subproblem_sol_opts['nlpsol_options'] = opts
+            self.subproblem_sol_opts = {}
             self.subproblem_sol_opts['verbose'] = True
             self.subproblem_sol_opts["print_time"] = False
-
-        if bool(opts) and 'error_on_fail' in opts:
-            self.subproblem_sol_opts['error_on_fail'] = opts['error_on_fail']
-        else:
             self.subproblem_sol_opts['error_on_fail'] = False
 
         if bool(opts) and 'opt_check_slacks' in opts:
@@ -204,3 +185,4 @@ class Options:
             self.regularization_factor_increase = opts['regularization_factor_increase']
         else:
             self.regularization_factor_increase = 10
+            
