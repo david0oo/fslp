@@ -61,7 +61,7 @@ init_dict['x0'] = x0
 opts = {}
 opts['solver_type'] = 'SLP'
 opts['subproblem_solver'] = 'cplex'
-opts['subproblem_solver_opts'] = {'verbose': True,
+opts['subproblem_solver_opts'] = {'verbose': False,
                       'tol': 1e-9,
                       'qp_method': 2,
                       'warm_start': True,
@@ -69,7 +69,7 @@ opts['subproblem_solver_opts'] = {'verbose': True,
                       'cplex': {'CPXPARAM_Simplex_Display': 0,
                                 'CPXPARAM_ScreenOutput': 0}}
 opts['max_iter'] = 45
-opts['tr_rad0'] = 1.0
+opts['tr_rad0'] = 5.5
 opts['optimality_tol'] = 1e-12
 opts['error_on_fail'] = False
 

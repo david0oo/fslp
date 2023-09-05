@@ -49,6 +49,14 @@ class Logger:
         self.list_mks = []
         self.list_grad_lag = []
 
+        # Timing
+        self.t_wall = -1.0
+        self.t_wall_zero_slacks = -1.0
+        self.number_iterations_until_slack_zero = -1
+        self.n_eval_g_until_slack_zero = -1
+
+
+
     def increment_n_eval_f(self):
         self.n_eval_f += 1
 
@@ -70,8 +78,6 @@ class Logger:
     def increment_iteration_counter(self):
         self.iteration_counter += 1
 
-    def increment_inner_iteration_counter(self):
-        self.inner_iteration_counter += 1
+    # def increment_inner_iteration_counter(self):
+    #     self.feasibility_iteration_counter += 1
 
-    def increment_inner_iteration_counter(self):
-        self.inner_iteration_counter += 1

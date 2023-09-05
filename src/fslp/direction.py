@@ -27,6 +27,9 @@ class Direction:
         self.lam_a_inner_iterates = cs.DM.zeros(problem.number_constraints)
         self.use_sqp = opts.use_sqp
 
+        self.dk_inf_norm = -1.0
+        self.previous_dk_inf_norm = -1.0
+
     def eval_m_k(self,
                  iterate: Iterate):
         """

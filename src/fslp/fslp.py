@@ -98,8 +98,8 @@ class FSLP:
 
         # self.success = False
 
-        self.lam_tmp_g = self.iterate.lam_g_k
-        self.lam_tmp_x = self.iterate.lam_x_k
+        # self.lam_tmp_g = self.iterate.lam_g_k
+        # self.lam_tmp_x = self.iterate.lam_x_k
 
         # self.inner_iter_count = 0
         # self.inner_iter_limit_count = 0
@@ -111,6 +111,7 @@ class FSLP:
         # self.__create_subproblem_solver()
 
         self.log.feasibility_iteration_counter = -1
+        self.log.inner_iters.append(-1)
         self.direction.m_k = -1
         self.direction.d_k = cs.DM.zeros(self.nlp_problem.number_variables)
 
@@ -147,8 +148,8 @@ class FSLP:
             # self.n_iter = i + 1
             self.log.increment_iteration_counter()
             
-            self.lam_tmp_g = self.iterate.lam_g_k
-            self.lam_tmp_x = self.iterate.lam_x_k
+            # self.lam_tmp_g = self.iterate.lam_g_k
+            # self.lam_tmp_x = self.iterate.lam_x_k
 
             
             # Solve the LP / QP -----------------------------------------------
@@ -192,15 +193,16 @@ class FSLP:
                 self.log.list_mks.append(float(cs.fabs(self.direction.m_k)))
                 break
 
-            self.step_inf_norm = cs.norm_inf(self.trust_region.tr_scale_mat_k @ self.direction.d_k)
 
             # ----------------- feasibility iterations ------------------------
 
-            self.prev_step_inf_norm = self.step_inf_norm
-            (self.x_k_correction,
-                self.lam_p_g_k,
-                self.lam_p_x_k,
-                self.feas_iter) = self.feasibility_iterations()
+            self.direction.dk_inf_norm = cs.norm_inf(self.trust_region.tr_scale_mat_k @ self.direction.d_k)
+            self.direction.previous_dk_inf_norm = self.direction.dk_inf_norm
+            # (self.x_k_correction,
+            #     self.lam_p_g_k,
+            #     self.lam_p_x_k,
+            #     self.feas_iter) = self.feasibility_iterations()
+            self.feasibility_iterations()
 
             # ------------- Trust-region iterations ---------------------------
             if not self.kappa_acceptance:
@@ -243,15 +245,13 @@ class FSLP:
             self.direction.prepare_subproblem_bounds_variables(self.trust_region, self.iterate, self.nlp_problem)
 
         # Max_iter reached or optimal solution found
-        self.stats['t_wall'] = timer() - self.lasttime
+        self.log.t_wall = timer() - self.lasttime
         if hasattr(self, 'slacks_zero_t_wall'):
-            self.stats['t_wall_zero_slacks'] = self.slacks_zero_t_wall
+            self.log.t_wall_zero_slacks = self.slacks_zero_t_wall
         else:
-            self.stats['t_wall_zero_slacks'] = self.stats['t_wall']
-        self.stats['iter_count'] = self.n_iter
-        self.stats['accepted_iter'] = self.accepted_counter
-        self.stats['iter_slacks_zero'] = self.slacks_zero_iter
-        self.stats['n_eval_g_slacks_zero'] = self.slacks_zero_n_eval_g
+            self.log.t_wall_zero_slacks = self.log.t_wall
+        # self.stats['iter_slacks_zero'] = self.slacks_zero_iter
+        # self.stats['n_eval_g_slacks_zero'] = self.slacks_zero_n_eval_g
 
         return self.iterate.x_k, self.iterate.f_k, self.iterate.lam_g_k, self.iterate.lam_x_k
 
@@ -291,16 +291,16 @@ class FSLP:
         step_norms = []
         kappas = []
 
-        watchdog_prev_inf_norm = self.prev_step_inf_norm
+        watchdog_prev_inf_norm = self.direction.previous_dk_inf_norm
         accumulated_as_ex = 0
 
         for j in range(self.options.max_inner_iter):
 
-            # ----------- termination criterium -------------------------------
+            # ----------- termination criterion -------------------------------
             # if cs.norm_inf(self.tr_scale_mat_k @ p_tmp) < self.feas_tol:
             if self.curr_infeas < self.options.feasibility_tol:
                 inner_iter = j
-                if as_exac < 0.5:               
+                if as_exac < 0.5:             
                     self.kappa_acceptance = True
                     break
                 else:
@@ -311,8 +311,8 @@ class FSLP:
                 break
 
             inner_iter = j+1
-            self.lam_tmp_g = self.lam_p_g_k
-            self.lam_tmp_x = self.lam_p_x_k
+            # self.lam_tmp_g = self.lam_p_g_k
+            # self.lam_tmp_x = self.lam_p_x_k
 
 
             # -------------- Prepare subproblem -------------------------------
@@ -357,7 +357,7 @@ class FSLP:
             self.direction.lam_d_inner_iterates,
             self.direction.lam_a_inner_iterates) = self.subproblem.solve_subproblem(solver_dict)
 
-            self.step_inf_norm = cs.norm_inf(self.trust_region.tr_scale_mat_k @ self.direction.d_inner_iterates)
+            self.direction.dk_inf_norm = cs.norm_inf(self.trust_region.tr_scale_mat_k @ self.direction.d_inner_iterates)
 
 
             if self.options.use_anderson:
@@ -366,12 +366,11 @@ class FSLP:
                 self.iterate.x_inner_iterates = self.iterate.x_inner_iterates + self.direction.d_inner_iterates
             self.g_tmp = self.nlp_problem.eval_g(self.iterate.x_inner_iterates,self.iterate.p, self.log)  # x_tmp = x_{tmp-1} + p_tmp
 
-
             # ------------ termination heuristic ------------------------------
             self.curr_infeas = self.iterate.feasibility_measure(self.iterate.x_inner_iterates, self.g_tmp, self.nlp_problem)
             self.prev_infeas = self.curr_infeas
 
-            kappa = self.step_inf_norm/self.prev_step_inf_norm
+            kappa = self.direction.dk_inf_norm/self.direction.previous_dk_inf_norm
             kappas.append(kappa)
 
 
@@ -386,8 +385,8 @@ class FSLP:
             # +1 excludes the first iteration from the kappa test
             accumulated_as_ex += as_exac
             if inner_iter % self.options.watchdog == 0:
-                kappa_watch = self.step_inf_norm/watchdog_prev_inf_norm
-                watchdog_prev_inf_norm = self.step_inf_norm
+                kappa_watch = self.direction.dk_inf_norm/watchdog_prev_inf_norm
+                watchdog_prev_inf_norm = self.direction.dk_inf_norm
                 if self.options.verbose:
                     print("kappa watchdog: ", kappa_watch)
                 if self.curr_infeas < self.options.feasibility_tol and as_exac < 0.5:
@@ -404,9 +403,9 @@ class FSLP:
             asymptotic_exactness.append(as_exac)
             step_norms.append(cs.norm_inf(self.direction.d_inner_iterates))
 
-            self.prev_step_inf_norm = self.step_inf_norm
-            self.lam_tmp_g = self.lam_p_g_k
-            self.lam_tmp_x = self.lam_p_x_k
+            self.direction.previous_dk_inf_norm = self.direction.dk_inf_norm
+            # self.lam_tmp_g = self.lam_p_g_k
+            # self.lam_tmp_x = self.lam_p_x_k
 
         self.log.feasibility_iteration_counter += inner_iter
         self.log.inner_iters.append(inner_iter)
@@ -416,4 +415,4 @@ class FSLP:
         self.log.inner_kappas.append(kappas)
         self.log.asymptotic_exactness.append(as_exac)
 
-        return self.iterate.x_inner_iterates, self.iterate.lam_g_inner_iterates, self.iterate.lam_x_inner_iterates, inner_iter
+        # return self.iterate.x_inner_iterates, self.iterate.lam_g_inner_iterates, self.iterate.lam_x_inner_iterates, inner_iter
