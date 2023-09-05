@@ -248,19 +248,20 @@ class Subproblem:
         print("Result")
         print(res)
 
-        p = res['x']
+        p_tmp = res['x']
         # Get indeces where variables are violated
-        # lower_p = list(np.nonzero(np.array(p_tmp < lbx).squeeze())[0])
-        # upper_p = list(np.nonzero(np.array(p_tmp > ubx).squeeze())[0])
+        lower_p = list(np.nonzero(np.array(p_tmp < problem_dict['lbx']).squeeze())[0])
+        upper_p = list(np.nonzero(np.array(p_tmp > problem_dict['ubx']).squeeze())[0])
 
-        # # Resolve the 'violation' in the search direction
-        # if bool(lower_p):
-        #     p_tmp[lower_p] = lbx[lower_p]
-        # if bool(upper_p):
-        #     p_tmp[upper_p] = ubx[upper_p]
+        # Resolve the 'violation' in the search direction
+        if bool(lower_p):
+            p_tmp[lower_p] = problem_dict['lbx'][lower_p]
+        if bool(upper_p):
+            p_tmp[upper_p] = problem_dict['ubx'][upper_p]
 
-        # # Process the new search directions and multipliers w/o slacks
-        # p = p_tmp
+        # Process the new search directions and multipliers w/o slacks
+        p = p_tmp
+        
         lam_p_g = res['lam_a']
         lam_p_x = res['lam_x']
         
