@@ -63,7 +63,7 @@ init_dict['tr_rad0'] = 5.5#1
 opts = {}
 opts['solver_type'] = 'SLP'
 opts['subproblem_sol'] = 'cplex'
-opts['subproblem_sol_opts'] = {'verbose': False,
+opts['subproblem_sol_opts'] = {'verbose': True,
                       'tol': 1e-9,
                       'qp_method': 2,
                       'warm_start': True,

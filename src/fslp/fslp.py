@@ -424,6 +424,9 @@ class FSLP_Method:
                                         lam_x0=lam_x0,
                                         lam_a0=lam_a0)
 
+        print("Result is:")
+        print(res)
+
         # Keep track that bounds of QP are guaranteed. If not because of a
         # tolerance, make them exact.
         p_tmp = res['x']
@@ -962,10 +965,17 @@ class FSLP_Method:
 
             kappa = self.step_inf_norm/self.prev_step_inf_norm
             kappas.append(kappa)
+            print("step inf norm", self.step_inf_norm)
+            print("prev step inf norm", self.prev_step_inf_norm)
 
             self.p_k.to_file('p_k.mtx')
             self.x_tmp.to_file('x_tmp.mtx')
             self.x_k.to_file('x_k.mtx')
+
+            print("p_k", self.p_k)
+            print("x_k", self.x_k)
+            print("x_tmp", self.x_tmp)
+            print("g_tmp", self.g_tmp)
 
             as_exac = cs.norm_2(
                 self.p_k - (self.x_tmp - self.x_k)) / cs.norm_2(self.p_k)
