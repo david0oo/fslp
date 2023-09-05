@@ -60,25 +60,26 @@ init_dict['ubg'] = ubg
 init_dict['x0'] = x0
 init_dict['tr_rad0'] = 5.5#1
 
-# opts = {}
-# opts['lpsol'] = 'cplex'
-# opts['lpsol_opts'] = {'verbose': False,
-#                       'tol': 1e-9,
-#                       'qp_method': 2,
-#                       'warm_start': True,
-#                       'dep_check': 2,
-#                       'cplex': {'CPXPARAM_Simplex_Display': 0,
-#                                 'CPXPARAM_ScreenOutput': 0}}
-# opts['max_iter'] = 45
-# opts['optim_tol'] = 1e-12
-
-
 opts = {}
-opts['solver_type'] = 'SQP'
-opts['subproblem_sol'] = 'qpoases'
-opts['subproblem_sol_opts'] = {'nWSR':10000, "sparse":True, 'hessian_type': 'semidef', 'printLevel': 'none'}
-opts['max_iter'] = 500
-opts['optim_tol'] = 1e-10
+opts['solver_type'] = 'SLP'
+opts['subproblem_sol'] = 'cplex'
+opts['subproblem_sol_opts'] = {'verbose': False,
+                      'tol': 1e-9,
+                      'qp_method': 2,
+                      'warm_start': True,
+                      'dep_check': 2,
+                      'cplex': {'CPXPARAM_Simplex_Display': 0,
+                                'CPXPARAM_ScreenOutput': 0}}
+opts['max_iter'] = 1
+opts['optim_tol'] = 1e-12
+
+
+# opts = {}
+# opts['solver_type'] = 'SQP'
+# opts['subproblem_sol'] = 'qpoases'
+# opts['subproblem_sol_opts'] = {'nWSR':10000, "sparse":True, 'hessian_type': 'semidef', 'printLevel': 'none'}
+# opts['max_iter'] = 500
+# opts['optim_tol'] = 1e-10
 
 # Create FSLP solver
 feasible_solver = fslp.FSLP_Method()
