@@ -169,7 +169,7 @@ class FSLP:
             (solve_success,
             self.direction.d_k,
             self.direction.lam_a_k,
-            self.lam_d_k) = self.subproblem.solve_subproblem(solver_dict)
+            self.direction.lam_d_k) = self.subproblem.solve_subproblem(solver_dict)
             # self.solve_subproblem(    g=self.g_k,
             #                                             lba=self.lba_k,
             #                                             uba=self.uba_k,

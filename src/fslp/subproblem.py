@@ -245,6 +245,8 @@ class Subproblem:
         print(problem_dict)
 
         res = self.subproblem_solver(**problem_dict)
+        print("Result")
+        print(res)
 
         p = res['x']
         # Get indeces where variables are violated
