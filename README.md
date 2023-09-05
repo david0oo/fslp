@@ -95,7 +95,7 @@ The algorithm is described in:
 
 [A Feasible Sequential Linear Programming Algorithm with Application to Time-Optimal Path Planning Problems](https://arxiv.org/abs/2205.00754)
 David Kiessling, Andrea Zanelli, Armin Nurkanović, Joris Gillis, Moritz Diehl, Melanie Zeilinger, Goele Pipeleers, Jan Swevers
-arxiv preprint 2022
+published in the Proceedings of the 61st IEEE Conference on Decision and Control
 
 ## Contact
 For questions, remarks, bugs please send an email to: [david.kiessling@kuleuven.be](david.kiessling@kuleuven.be)
