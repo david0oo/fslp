@@ -404,6 +404,16 @@ class FSLP_Method:
             the third entry are the lagrange multipliers for the new
             search direction
         """
+        print('g', g)
+        print('a', a)
+        print('lba', lba)
+        print('uba', uba)
+        print('lbx', lbx)
+        print('ubx', ubx)
+        print('x0', x0)
+        print('lam_x0', lam_x0)
+        print('lam_a0', lam_a0)
+
         res = self.subproblem_solver(   g=g,
                                         a=a,
                                         lba=lba,
