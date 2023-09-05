@@ -161,8 +161,8 @@ class FSLP:
             solver_dict['lbx'] = self.direction.lbd_k
             solver_dict['ubx'] = self.direction.ubd_k
             solver_dict['x0'] = self.direction.d_k
-            solver_dict['lam_x0'] = self.direction.lam_d_k
-            solver_dict['lam_a0'] = self.direction.lam_a_k
+            solver_dict['lam_x0'] = self.iterate.lam_x_k
+            solver_dict['lam_a0'] = self.iterate.lam_g_k
             if self.options.use_sqp:
                 solver_dict['h'] = self.direction.H_k
 
@@ -209,7 +209,7 @@ class FSLP:
                 step_accepted = False
                 if self.options.verbose:
                     print('Rejected inner iterates or asymptotic exactness')
-                self.tr_rad_k = 0.5*cs.norm_inf(self.trust_region.tr_scale_mat_k @ self.direction.d_k)
+                self.trust_region.tr_reduction(self.direction, self.options)
             else:
                 self.trust_region.eval_trust_region_ratio(self.iterate, self.direction, self.nlp_problem, self.log)
                 self.trust_region.tr_update(self.direction, self.options)

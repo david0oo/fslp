@@ -241,12 +241,12 @@ class Subproblem:
         lam_p_scale     Casadi DM vector, the lagrange multipliers for the new
                         search direction
         """
-        print("Subproblem is:")
-        print(problem_dict)
+        # print("Subproblem is:")
+        # print(problem_dict)
 
         res = self.subproblem_solver(**problem_dict)
-        print("Result")
-        print(res)
+        # print("Result")
+        # print(res)
 
         p_tmp = res['x']
         # Get indeces where variables are violated

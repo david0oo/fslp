@@ -72,6 +72,12 @@ class TrustRegion:
             print('ared is negative')
         self.tr_ratio = (iterate.f_k - f_correction)/(-direction.m_k)
 
+    def tr_reduction(self, direction: Direction, opts: Options):
+        """
+        Reduce the trust-region radius
+        """
+        self.tr_radius_k = opts.tr_alpha1 * cs.norm_inf(self.tr_scale_mat_k @ direction.d_k)
+
     def tr_update(self, direction: Direction, opts: Options):
         """
         We use the Trust-Region Update of the paper Wright, Tenny 
