@@ -187,7 +187,7 @@ class FSLP:
 
             if cs.fabs(self.direction.m_k) < self.options.optimality_tol:
                 if self.options.verbose:
-                    print('Optimal Point Found? Linear model is {m_k:^10.4e}.'.format(m_k=np.array(self.m_k).squeeze()))
+                    print('Optimal Point Found? Linear model is {m_k:^10.4e}.'.format(m_k=float(self.direction.m_k)))
                 self.success = True
                 self.log.solver_success = True
                 self.log.list_mks.append(float(cs.fabs(self.direction.m_k)))
