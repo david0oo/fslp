@@ -246,28 +246,28 @@ class Subproblem:
         # print("Subproblem is:")
         # print(problem_dict)
 
-        if self.solve_feasibility_iter:
+        # if self.solve_feasibility_iter:
 
-            problem_dict['g'].to_file('g_fslp_old.mtx')
-            problem_dict['a'].to_file('a_fslp_old.mtx')
-            problem_dict['lba'].to_file('lba_fslp_old.mtx')
-            problem_dict['uba'].to_file('uba_fslp_old.mtx')
-            problem_dict['lbx'].to_file('lbx_fslp_old.mtx')
-            problem_dict['ubx'].to_file('ubx_fslp_old.mtx')
-            problem_dict['x0'].to_file('x0_fslp_old.mtx')
-            problem_dict['lam_x0'].to_file('lam_x0_fslp_old.mtx')
-            problem_dict['lam_a0'].to_file('lam_a0_fslp_old.mtx')
+        #     problem_dict['g'].to_file('g_fslp_old.mtx')
+        #     problem_dict['a'].to_file('a_fslp_old.mtx')
+        #     problem_dict['lba'].to_file('lba_fslp_old.mtx')
+        #     problem_dict['uba'].to_file('uba_fslp_old.mtx')
+        #     problem_dict['lbx'].to_file('lbx_fslp_old.mtx')
+        #     problem_dict['ubx'].to_file('ubx_fslp_old.mtx')
+        #     problem_dict['x0'].to_file('x0_fslp_old.mtx')
+        #     problem_dict['lam_x0'].to_file('lam_x0_fslp_old.mtx')
+        #     problem_dict['lam_a0'].to_file('lam_a0_fslp_old.mtx')
 
-        else:
-            problem_dict['g'].to_file('outer_g_fslp_old.mtx')
-            problem_dict['a'].to_file('outer_a_fslp_old.mtx')
-            problem_dict['lba'].to_file('outer_lba_fslp_old.mtx')
-            problem_dict['uba'].to_file('outer_uba_fslp_old.mtx')
-            problem_dict['lbx'].to_file('outer_lbx_fslp_old.mtx')
-            problem_dict['ubx'].to_file('outer_ubx_fslp_old.mtx')
-            problem_dict['x0'].to_file('outer_x0_fslp_old.mtx')
-            problem_dict['lam_x0'].to_file('outer_lam_x0_fslp_old.mtx')
-            problem_dict['lam_a0'].to_file('outer_lam_a0_fslp_old.mtx')
+        # else:
+        #     problem_dict['g'].to_file('outer_g_fslp_old.mtx')
+        #     problem_dict['a'].to_file('outer_a_fslp_old.mtx')
+        #     problem_dict['lba'].to_file('outer_lba_fslp_old.mtx')
+        #     problem_dict['uba'].to_file('outer_uba_fslp_old.mtx')
+        #     problem_dict['lbx'].to_file('outer_lbx_fslp_old.mtx')
+        #     problem_dict['ubx'].to_file('outer_ubx_fslp_old.mtx')
+        #     problem_dict['x0'].to_file('outer_x0_fslp_old.mtx')
+        #     problem_dict['lam_x0'].to_file('outer_lam_x0_fslp_old.mtx')
+        #     problem_dict['lam_a0'].to_file('outer_lam_a0_fslp_old.mtx')
 
         res = self.subproblem_solver(**problem_dict)
         # print("Result")
@@ -292,10 +292,10 @@ class Subproblem:
         
         solve_success = self.subproblem_solver.stats()['success']
 
-        if self.solve_feasibility_iter:
-            self.solve_feasibility_iter = False
-        else:
-            self.solve_feasibility_iter = True
+        # if self.solve_feasibility_iter:
+        #     self.solve_feasibility_iter = False
+        # else:
+        #     self.solve_feasibility_iter = True
 
         return (solve_success, p, lam_p_g, lam_p_x)
 
