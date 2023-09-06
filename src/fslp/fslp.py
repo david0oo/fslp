@@ -414,6 +414,8 @@ class FSLP_Method:
         # print('lam_x0', lam_x0)
         # print('lam_a0', lam_a0)
 
+        
+
         res = self.subproblem_solver(   g=g,
                                         a=a,
                                         lba=lba,
@@ -922,12 +924,24 @@ class FSLP_Method:
             lba_correction = self.lbg - self.g_tmp
             uba_correction = self.ubg - self.g_tmp
 
-            grad_f_correction.to_file('gf_feas.mtx')
-            lba_correction.to_file('lba_correction.mtx')
-            uba_correction.to_file('uba_correction.mtx')
-            lb_var_correction.to_file('lb_var_correction.mtx')
-            ub_var_correction.to_file('ub_var_correction.mtx')
+            # grad_f_correction.to_file('gf_feas.mtx')
+            # lba_correction.to_file('lba_correction.mtx')
+            # uba_correction.to_file('uba_correction.mtx')
+            # lb_var_correction.to_file('lb_var_correction.mtx')
+            # ub_var_correction.to_file('ub_var_correction.mtx')
             
+            grad_f_correction.to_file('g_fslp_old.mtx')
+            self.A_k.to_file('g_fslp_old.mtx')
+            lba_correction.to_file('lba_fslp_old.mtx')
+            uba_correction.to_file('uba_fslp_old.mtx')
+            lb_var_correction.to_file('lbx_fslp_old.mtx')
+            ub_var_correction.to_file('ubx_fslp_old.mtx')
+            p_tmp.to_file('x0_fslp_old.mtx')
+            lam_p_x_tmp.to_file('lam_x0_fslp_old.mtx')
+            lam_p_g_tmp.to_file('lam_a0_fslp_old.mtx')
+            print("We were here!")
+
+
             (_,
             p_tmp,
             lam_p_g_tmp,
@@ -940,7 +954,7 @@ class FSLP_Method:
                                                     lam_x0=lam_p_x_tmp,
                                                     lam_a0=lam_p_g_tmp)
 
-            p_tmp.to_file('dx_feas.mtx')
+            # p_tmp.to_file('dx_feas.mtx')
             # p_tmp = self.__set_optimal_slack_step(self.x_tmp, p_tmp)
             # p_tmp.to_file('p_tmp_minimalSlacks.mtx')
 
@@ -968,9 +982,9 @@ class FSLP_Method:
             # print("step inf norm", self.step_inf_norm)
             # print("prev step inf norm", self.prev_step_inf_norm)
 
-            self.p_k.to_file('p_k.mtx')
-            self.x_tmp.to_file('x_tmp.mtx')
-            self.x_k.to_file('x_k.mtx')
+            # self.p_k.to_file('p_k.mtx')
+            # self.x_tmp.to_file('x_tmp.mtx')
+            # self.x_k.to_file('x_k.mtx')
 
             # print("p_k", self.p_k)
             # print("x_k", self.x_k)
@@ -1237,9 +1251,9 @@ class FSLP_Method:
         self.__check_slacks_zero()
         self.accepted_counter = 0
 
-        self.x_k.to_file('x0.mtx')
-        self.val_g_k.to_file('g0.mtx')
-        self.val_grad_f_k.to_file('gf0.mtx')
+        # self.x_k.to_file('x0.mtx')
+        # self.val_g_k.to_file('g0.mtx')
+        # self.val_grad_f_k.to_file('gf0.mtx')
 
         for i in range(self.max_iter):
             # Do the FSLP outer iterations here
@@ -1253,14 +1267,14 @@ class FSLP_Method:
 
             self.tr_radii.append(self.tr_rad_k)
 
-            self.g_k.to_file('gf.mtx')
-            self.lb_var_k.to_file('lb_var.mtx')
-            self.ub_var_k.to_file('ub_var.mtx')
-            self.lba_k.to_file('lba.mtx')
-            self.uba_k.to_file('uba.mtx')
-            if self.use_sqp:
-                self.H_k.to_file('Bk.mtx')
-            self.A_k.to_file('Jk.mtx')
+            self.g_k.to_file('outer_g_fslp_old.mtx')
+            self.lb_var_k.to_file('outer_lbx_fslp_old.mtx')
+            self.ub_var_k.to_file('outer_ubx_fslp_old.mtx')
+            self.lba_k.to_file('outer_lba_fslp_old.mtx')
+            self.uba_k.to_file('outer_uba_fslp_old.mtx')
+            # if self.use_sqp:
+            #     self.H_k.to_file('Bk.mtx')
+            self.A_k.to_file('outer_a_fslp_old.mtx')
             
             (solve_success,
             self.p_k,
@@ -1286,7 +1300,7 @@ class FSLP_Method:
                 break
 
             # self.p_k = self.__set_optimal_slack_step(self.x_k, self.p_k)
-            self.p_k.to_file('dx.mtx')
+            # self.p_k.to_file('dx.mtx')
             self.m_k = self.eval_m_k(self.p_k)
 
             if cs.fabs(self.m_k) < self.optim_tol:
