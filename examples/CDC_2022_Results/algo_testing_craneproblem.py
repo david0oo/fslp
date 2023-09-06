@@ -105,8 +105,8 @@ test_fslp = True
 opts = {}
 opts['subproblem_solver'] = 'cplex'
 opts['subproblem_solver_opts'] = {'error_on_fail':False, 'verbose':False, 'tol':1e-9, 'qp_method':2, 'warm_start':True, 'dep_check':2, 'cplex':{'CPXPARAM_Simplex_Display':0, 'CPXPARAM_ScreenOutput':0}}
-max_iter = 200
-max_inner_iter = 50
+max_iter = 1#200
+max_inner_iter = 1#50
 contraction_acceptance = 0.3
 watchdog = 5
 feas_tol = 1e-7
@@ -171,7 +171,9 @@ for i in range(len(start_list_tuples)):
             init_dict['x0'] = x0
             init_dict['tr_rad0'] = 1.0
 
-            init_dict['tr_scale_mat0'], init_dict['tr_scale_mat_inv0'] = testproblem.create_scaling_matrices_python()
+            # init_dict['tr_scale_mat0'], init_dict['tr_scale_mat_inv0'] = testproblem.create_scaling_matrices_python()
+            # This is moved to options
+            opts['tr_scale_mat0'], opts['tr_scale_mat_inv0'] = testproblem.create_scaling_matrices_python()
             
             feasible_solver = fslp.FSLP(problem_dict, opts)
             x_sol, f_sol, lam_g_sol, lam_x_sol = feasible_solver(init_dict)
