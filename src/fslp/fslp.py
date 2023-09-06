@@ -931,7 +931,7 @@ class FSLP_Method:
             # ub_var_correction.to_file('ub_var_correction.mtx')
             
             grad_f_correction.to_file('g_fslp_old.mtx')
-            self.A_k.to_file('g_fslp_old.mtx')
+            self.A_k.to_file('a_fslp_old.mtx')
             lba_correction.to_file('lba_fslp_old.mtx')
             uba_correction.to_file('uba_fslp_old.mtx')
             lb_var_correction.to_file('lbx_fslp_old.mtx')
@@ -939,8 +939,6 @@ class FSLP_Method:
             p_tmp.to_file('x0_fslp_old.mtx')
             lam_p_x_tmp.to_file('lam_x0_fslp_old.mtx')
             lam_p_g_tmp.to_file('lam_a0_fslp_old.mtx')
-            print("We were here!")
-
 
             (_,
             p_tmp,
