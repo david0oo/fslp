@@ -72,8 +72,7 @@ def store_stats_ipopt(solver, sol):
             success, f_opt, x_opt, obj_values, inf_pr, t_wall_total]
 
 # %% 
-
-start_final_index = 10
+start_final_index = 1#10
 with open ('start_perturbations_crane.pkl', 'rb') as fp:
     start_list_tuples = pickle.load(fp)
 
@@ -81,7 +80,7 @@ start_list_tuples = start_list_tuples[0:start_final_index]
 start_points = ["start"+str(i) for i in range(len(start_list_tuples))]
 
 # Reload the end list from file
-end_final_index = 10
+end_final_index = 1#10
 with open ('end_perturbations_crane.pkl', 'rb') as fp:
     end_list_tuples = pickle.load(fp)
 end_list_tuples = end_list_tuples[0:end_final_index]
@@ -104,8 +103,8 @@ problem_stats_fpsqp = []
 test_ipopt = False
 test_fslp = True
 opts = {}
-opts['lpsol'] = 'cplex'
-opts['lpsol_opts'] = {'verbose':False, 'tol':1e-9, 'qp_method':2, 'warm_start':True, 'dep_check':2, 'cplex':{'CPXPARAM_Simplex_Display':0, 'CPXPARAM_ScreenOutput':0}}
+opts['subproblem_solver'] = 'cplex'
+opts['subproblem_solver_opts'] = {'error_on_fail':False, 'verbose':False, 'tol':1e-9, 'qp_method':2, 'warm_start':True, 'dep_check':2, 'cplex':{'CPXPARAM_Simplex_Display':0, 'CPXPARAM_ScreenOutput':0}}
 max_iter = 200
 max_inner_iter = 50
 contraction_acceptance = 0.3
@@ -131,7 +130,6 @@ opts['tr_tol'] = tr_tol
 opts['opt_check_slacks'] = True
 opts['n_slacks_start'] = 6
 opts['n_slacks_end'] = 6
-# opts['gradient_correction'] = True
 
 opts_ipopt = {'print_time': True,
               'ipopt': {'print_level':0, 'sb':'yes',
@@ -173,10 +171,10 @@ for i in range(len(start_list_tuples)):
             init_dict['x0'] = x0
             init_dict['tr_rad0'] = 1.0
 
-            init_dict['tr_scale_mat0'], init_dict['tr_scale_mat_inv0'] = testproblem.create_scaling_matrices()
+            init_dict['tr_scale_mat0'], init_dict['tr_scale_mat_inv0'] = testproblem.create_scaling_matrices_python()
             
-            feasible_solver = fslp.FSLP_Method()
-            x_sol, f_sol = feasible_solver.solve(problem_dict, init_dict, opts)
+            feasible_solver = fslp.FSLP(problem_dict, opts)
+            x_sol, f_sol, lam_g_sol, lam_x_sol = feasible_solver(init_dict)
 
             stats_fpsqp = store_stats_fpsqp(feasible_solver, f_sol, x_sol)
             problem_stats_fpsqp.append(stats_fpsqp)
