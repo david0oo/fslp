@@ -354,8 +354,8 @@ class FSLP:
             
             (_,
             self.direction.d_inner_iterates,
-            self.direction.lam_d_inner_iterates,
-            self.direction.lam_a_inner_iterates) = self.subproblem.solve_subproblem(solver_dict)
+            self.direction.lam_a_inner_iterates,
+            self.direction.lam_d_inner_iterates) = self.subproblem.solve_subproblem(solver_dict)
 
             self.direction.dk_inf_norm = cs.norm_inf(self.trust_region.tr_scale_mat_k @ self.direction.d_inner_iterates)
 
