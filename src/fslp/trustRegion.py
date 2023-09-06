@@ -24,6 +24,7 @@ class TrustRegion:
         self.tr_radius_k = options.tr_radius0
         self.tr_scale_mat_k = options.tr_scale_mat0
         self.tr_scale_mat_inv_k = options.tr_scale_mat_inv0
+        self.tr_reduction_alpha = 0.5 # Remove hard-coded stuff .....
         self.step_accepted = False
 
     # def eval_m_k(self, p:cs.DM):
@@ -76,7 +77,7 @@ class TrustRegion:
         """
         Reduce the trust-region radius
         """
-        self.tr_radius_k = opts.tr_alpha1 * cs.norm_inf(self.tr_scale_mat_k @ direction.d_k)
+        self.tr_radius_k = self.tr_reduction_alpha * cs.norm_inf(self.tr_scale_mat_k @ direction.d_k)
 
     def tr_update(self, direction: Direction, opts: Options):
         """
