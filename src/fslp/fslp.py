@@ -404,15 +404,15 @@ class FSLP_Method:
             the third entry are the lagrange multipliers for the new
             search direction
         """
-        print('g', g)
-        print('a', a)
-        print('lba', lba)
-        print('uba', uba)
-        print('lbx', lbx)
-        print('ubx', ubx)
-        print('x0', x0)
-        print('lam_x0', lam_x0)
-        print('lam_a0', lam_a0)
+        # print('g', g)
+        # print('a', a)
+        # print('lba', lba)
+        # print('uba', uba)
+        # print('lbx', lbx)
+        # print('ubx', ubx)
+        # print('x0', x0)
+        # print('lam_x0', lam_x0)
+        # print('lam_a0', lam_a0)
 
         res = self.subproblem_solver(   g=g,
                                         a=a,
@@ -424,8 +424,8 @@ class FSLP_Method:
                                         lam_x0=lam_x0,
                                         lam_a0=lam_a0)
 
-        print("Result is:")
-        print(res)
+        # print("Result is:")
+        # print(res)
 
         # Keep track that bounds of QP are guaranteed. If not because of a
         # tolerance, make them exact.
@@ -965,17 +965,17 @@ class FSLP_Method:
 
             kappa = self.step_inf_norm/self.prev_step_inf_norm
             kappas.append(kappa)
-            print("step inf norm", self.step_inf_norm)
-            print("prev step inf norm", self.prev_step_inf_norm)
+            # print("step inf norm", self.step_inf_norm)
+            # print("prev step inf norm", self.prev_step_inf_norm)
 
             self.p_k.to_file('p_k.mtx')
             self.x_tmp.to_file('x_tmp.mtx')
             self.x_k.to_file('x_k.mtx')
 
-            print("p_k", self.p_k)
-            print("x_k", self.x_k)
-            print("x_tmp", self.x_tmp)
-            print("g_tmp", self.g_tmp)
+            # print("p_k", self.p_k)
+            # print("x_k", self.x_k)
+            # print("x_tmp", self.x_tmp)
+            # print("g_tmp", self.g_tmp)
 
             as_exac = cs.norm_2(
                 self.p_k - (self.x_tmp - self.x_k)) / cs.norm_2(self.p_k)

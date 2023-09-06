@@ -73,7 +73,7 @@ def store_stats_ipopt(solver, sol):
 
 # %% 
 
-start_final_index = 10
+start_final_index = 1#10
 with open ('start_perturbations_crane.pkl', 'rb') as fp:
     start_list_tuples = pickle.load(fp)
 
@@ -81,7 +81,7 @@ start_list_tuples = start_list_tuples[0:start_final_index]
 start_points = ["start"+str(i) for i in range(len(start_list_tuples))]
 
 # Reload the end list from file
-end_final_index = 10
+end_final_index = 1#10
 with open ('end_perturbations_crane.pkl', 'rb') as fp:
     end_list_tuples = pickle.load(fp)
 end_list_tuples = end_list_tuples[0:end_final_index]
@@ -104,13 +104,13 @@ problem_stats_fpsqp = []
 test_ipopt = False
 test_fslp = True
 opts = {}
-opts['lpsol'] = 'cplex'
-opts['lpsol_opts'] = {'verbose':False, 'tol':1e-9, 'qp_method':2, 'warm_start':True, 'dep_check':2, 'cplex':{'CPXPARAM_Simplex_Display':0, 'CPXPARAM_ScreenOutput':0}}
+opts['subproblem_sol'] = 'cplex'
+opts['subproblem_sol_opts'] = {'verbose':False, 'tol':1e-9, 'qp_method':2, 'warm_start':True, 'dep_check':2, 'cplex':{'CPXPARAM_Simplex_Display':0, 'CPXPARAM_ScreenOutput':0}}
 max_iter = 200
 max_inner_iter = 50
 contraction_acceptance = 0.3
 watchdog = 5
-feas_tol = 1e-7
+feas_tol = 1e-8
 tr_eta1 = 0.25#0.01
 tr_eta2 = 0.75#0.9
 tr_alpha1 = 0.25
@@ -173,7 +173,7 @@ for i in range(len(start_list_tuples)):
             init_dict['x0'] = x0
             init_dict['tr_rad0'] = 1.0
 
-            init_dict['tr_scale_mat0'], init_dict['tr_scale_mat_inv0'] = testproblem.create_scaling_matrices()
+            init_dict['tr_scale_mat0'], init_dict['tr_scale_mat_inv0'] = testproblem.create_scaling_matrices_python()
             
             feasible_solver = fslp.FSLP_Method()
             x_sol, f_sol = feasible_solver.solve(problem_dict, init_dict, opts)
