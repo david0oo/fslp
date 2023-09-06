@@ -21,6 +21,8 @@ class Subproblem:
                  iterate: Iterate):
         self.use_sqp = parameters.use_sqp
 
+        self.solve_feasibility_iter = False
+
         # Set up subproblem solver
         # self.subproblem_sol_opts["dump_in"] = True
         # self.subproblem_sol_opts["dump_out"] = True
@@ -223,7 +225,7 @@ class Subproblem:
     #                         x0:cs.DM=None,
     #                         lam_x0:cs.DM=None,
     #                         lam_a0:cs.DM=None):
-    def solve_subproblem(   self, problem_dict: dict):
+    def solve_subproblem(self, problem_dict: dict):
         """
         This function solves the qp subproblem. Additionally some processing of
         the result is done and the statistics are saved. The input signature is
@@ -243,6 +245,29 @@ class Subproblem:
         """
         # print("Subproblem is:")
         # print(problem_dict)
+
+        if self.solve_feasibility_iter:
+
+            problem_dict['g'].to_file('g_fslp_old.mtx')
+            problem_dict['a'].to_file('a_fslp_old.mtx')
+            problem_dict['lba'].to_file('lba_fslp_old.mtx')
+            problem_dict['uba'].to_file('uba_fslp_old.mtx')
+            problem_dict['lbx'].to_file('lbx_fslp_old.mtx')
+            problem_dict['ubx'].to_file('ubx_fslp_old.mtx')
+            problem_dict['x0'].to_file('x0_fslp_old.mtx')
+            problem_dict['lam_x0'].to_file('lam_x0_fslp_old.mtx')
+            problem_dict['lam_a0'].to_file('lam_a0_fslp_old.mtx')
+
+        else:
+            problem_dict['g'].to_file('outer_g_fslp_old.mtx')
+            problem_dict['a'].to_file('outer_a_fslp_old.mtx')
+            problem_dict['lba'].to_file('outer_lba_fslp_old.mtx')
+            problem_dict['uba'].to_file('outer_uba_fslp_old.mtx')
+            problem_dict['lbx'].to_file('outer_lbx_fslp_old.mtx')
+            problem_dict['ubx'].to_file('outer_ubx_fslp_old.mtx')
+            problem_dict['x0'].to_file('outer_x0_fslp_old.mtx')
+            problem_dict['lam_x0'].to_file('outer_lam_x0_fslp_old.mtx')
+            problem_dict['lam_a0'].to_file('outer_lam_a0_fslp_old.mtx')
 
         res = self.subproblem_solver(**problem_dict)
         # print("Result")
@@ -266,6 +291,11 @@ class Subproblem:
         lam_p_x = res['lam_x']
         
         solve_success = self.subproblem_solver.stats()['success']
+
+        if self.solve_feasibility_iter:
+            self.solve_feasibility_iter = False
+        else:
+            self.solve_feasibility_iter = True
 
         return (solve_success, p, lam_p_g, lam_p_x)
 
