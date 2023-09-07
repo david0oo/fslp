@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from fslp.nlp_problem import NLPProblem
     from fslp.logger import Logger
     from fslp.trustRegion import TrustRegion
+    from fslp.options import Options
 
 
 class Output:
@@ -21,7 +22,7 @@ class Output:
     def __init__(self):
         pass
 
-    def print_header(self):
+    def print_header(self, opts: Options):
         """
         This is the algorithm header
         """
@@ -29,6 +30,10 @@ class Output:
         print("                        This is FSLP                          ")
         print("               © MECO Research Team, KU Leuven                ")
         print("--------------------------------------------------------------")
+        if opts.use_anderson:
+            print("SOLVING PROBLEM WITH SQP!")
+        else:
+            print("SOLVING PROBLEM WITH SLP!")
 
     def print_iteration_header(self):
         """ 
@@ -43,12 +48,13 @@ class Output:
                         feas_it='feas iter', tr_rad='tr_rad',
                         tr_ratio='tr_ratio'))
 
-    def print_output(self,
+    def print_iteration(self,
                      i: int,
                      iterate: Iterate,
                      direction: Direction,
                      problem: NLPProblem,
                      tr: TrustRegion,
+                     opts: Options,
                      log: Logger):
         """
         This function prints the iteration output to the console.
@@ -56,7 +62,7 @@ class Output:
         Args:
             i (integer): the iteration index of the solve operator.
         """
-        if i % 10:
+        if opts.output_level == 2 or i % 10 == 0:
             self.print_iteration_header()
 
         print(("{iter:>6} | {m_k:^10.4e} | {grad_lag:^10.4e} | {feas:^10.4e} | "
@@ -81,11 +87,7 @@ class Output:
                                           asymptotic_exactness: float):
         """
         Print the inner iteration debug output.
-        """
-        # print("Kappa: ", kappa,
-        #       "Infeasibility", infeasibility,
-        #       "Asymptotic Exactness: ", asymptotic_exactness)
-        
+        """        
         print(("Kappa:{kappa:>10.6f}"
               "    Infeasibility:{infeasibility:>15.5e}"
               "    Asymptotic Exactness: {asymptotic_exactness:10.6f}").format(

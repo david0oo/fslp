@@ -68,7 +68,8 @@ class FSLP:
 
         self.lasttime = timer()
 
-        self.output.print_header()
+        if self.options.output_level >= 1:
+            self.output.print_header(self.options)
 
         # self.__initialize_parameters(problem_dict, init_dict, opts)
         # self.__initialize_functions(opts)
@@ -138,11 +139,12 @@ class FSLP:
             # Do the FSLP outer iterations here
             # print iteration here
             if self.options.output_level >= 1:
-                self.output.print_output(i,
+                self.output.print_iteration(i,
                                          self.iterate,
                                          self.direction,
                                          self.nlp_problem,
                                          self.trust_region,
+                                         self.options,
                                          self.log)
 
             # self.n_iter = i + 1

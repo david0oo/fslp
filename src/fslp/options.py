@@ -96,17 +96,11 @@ class Options:
         else:
             self.watchdog = 5
 
-        if bool(opts) and 'verbose' in opts:
-            self.verbose = opts['verbose']
-        else:
-            self.verbose = True            
-
         if bool(opts) and 'output_level' in opts:
+            if not opts['output_level'] in [0, 1, 2]:
+                raise ValueError("Output level needs to be 0, 1 or 2!")
             self.output_level = opts['output_level']
         else:
-            self.output_level = 2
-
-        if self.verbose:
             self.output_level = 2
 
         if bool(opts) and 'solver_type' in opts:
@@ -127,10 +121,10 @@ class Options:
             self.sz_anderson_memory = 1
 
         if self.solver_type == 'SQP':
-            print("SOLVING PROBLEM WITH SQP!\n")
+            # print("SOLVING PROBLEM WITH SQP!\n")
             self.use_sqp = True
         else:
-            print("SOLVING PROBLEM WITH SLP!\n")
+            # print("SOLVING PROBLEM WITH SLP!\n")
             self.use_sqp = False
 
         if bool(opts) and 'subproblem_solver' in opts:
