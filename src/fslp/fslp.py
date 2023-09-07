@@ -215,7 +215,7 @@ class FSLP:
                 self.trust_region.tr_update(self.direction, self.options)
                 step_accepted = self.trust_region.step_acceptable(self.options)
 
-            self.iterate.step_update(step_accepted)
+            self.iterate.step_update(step_accepted, self.direction)
 
             # -------------- Step acceptance in trust-region iters ------------
             if step_accepted:
@@ -376,19 +376,19 @@ class FSLP:
 
             as_exac = cs.norm_2(
                 self.direction.d_k - (self.iterate.x_inner_iterates - self.iterate.x_k)) / cs.norm_2(self.direction.d_k)
-            if self.options.verbose:
-                print("Kappa: ", kappa,
-                      "Infeasibility", self.iterate.feasibility_measure(
-                                self.iterate.x_inner_iterates, self.g_tmp, self.nlp_problem),
-                      "Asymptotic Exactness: ", as_exac)
+            # if self.options.verbose:
+                # print("Kappa: ", kappa,
+                #       "Infeasibility", self.iterate.feasibility_measure(
+                #                 self.iterate.x_inner_iterates, self.g_tmp, self.nlp_problem),
+                #       "Asymptotic Exactness: ", as_exac)
 
             # +1 excludes the first iteration from the kappa test
             accumulated_as_ex += as_exac
             if inner_iter % self.options.watchdog == 0:
                 kappa_watch = self.direction.dk_inf_norm/watchdog_prev_inf_norm
                 watchdog_prev_inf_norm = self.direction.dk_inf_norm
-                if self.options.verbose:
-                    print("kappa watchdog: ", kappa_watch)
+                # if self.options.verbose:
+                    # print("kappa watchdog: ", kappa_watch)
                 if self.curr_infeas < self.options.feasibility_tol and as_exac < 0.5:
                     self.kappa_acceptance = True
                     break

@@ -63,9 +63,7 @@ class Output:
                "{lam_x:^13.4e} | {feas_it:^9} | {tr_rad:^13.5e} | "
                "{tr_ratio:^10.8f}").format(
                      iter=i, m_k=float(direction.m_k),
-                     grad_lag=float(cs.norm_inf(
-                         problem.eval_gradient_lagrangian(
-                             iterate.x_k, iterate.p, cs.DM([1.0]), iterate.lam_g_k, iterate.lam_x_k, log))),
+                     grad_lag=float(cs.norm_inf(iterate.gradient_lagrangian_k)),
                      compl=float(
                          iterate.complementarity_condition(problem)),
                      f_x=float(iterate.f_k),

@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from fslp.nlp_problem import NLPProblem
     from fslp.options import Options
     from fslp.logger import Logger
-# from fslp.direction import Direction
+    from fslp.direction import Direction
 # from fslp.trustRegion import TrustRegion
 
 
@@ -54,8 +54,6 @@ class Iterate:
 
         # Initialize the inner iterates as well
         self.x_inner_iterates = cs.DM.zeros(problem.number_variables)
-        self.lam_x_inner_iterates = cs.DM.zeros(problem.number_variables)
-        self.lam_g_inner_iterates = cs.DM.zeros(problem.number_constraints)
 
         self.evaluate_quantities(problem, log, options)
 
@@ -69,6 +67,7 @@ class Iterate:
         self.g_k = nlp_problem.eval_g(self.x_k, self.p, log) 
         self.gradient_f_k = nlp_problem.eval_gradient_f(self.x_k, self.p, log)
         self.jacobian_g_k = nlp_problem.eval_jacobian_g(self.x_k, self.p, log)
+        self.gradient_lagrangian_k = nlp_problem.eval_gradient_lagrangian(self.x_k, self.p, cs.DM([1]), self.lam_g_k, self.lam_x_k, log)
 
         if parameter.use_sqp:
             self.hessian_lagrangian_k = nlp_problem.eval_hessian_lagrangian(self.x_k, self.p, cs.DM([1]), self.lam_g_k, log)
@@ -119,34 +118,12 @@ class Iterate:
                         cs.fmax(0, nlp_problem.lbx-x),
                         cs.fmax(0, x-nlp_problem.ubx))))
     
-
-    # def __eval_grad_jac(self, step_accepted: bool=False):
-    #     """ 
-    #     Evaluate functions, gradient, jacobian at current iterate x_k.
-
-    #     Args:
-    #         step_accepted (bool, optional): Denotes if previous step was
-    #         accepted. In an accepted step the gradient of the constraints do
-    #         not need to be re-evaluated. Defaults to False.
-    #     """
-    #     self.val_f_k = self.__eval_f(self.x_k)
-    #     if step_accepted:
-    #         self.val_g_k = self.g_tmp
-    #     else:
-    #         self.val_g_k = self.__eval_g(self.x_k)
-    #     self.val_grad_f_k = self.__eval_grad_f(self.x_k)
-    #     self.val_jac_g_k = self.__eval_jac_g(self.x_k)
-    #     if self.use_sqp:
-    #         self.hess_lag_k = self.__eval_hess_l(self.x_k,
-    #                                              self.lam_g_k,
-    #                                              self.lam_x_k)
-
-    def step_update(self, step_acceptable: bool, ):
+    def step_update(self, step_acceptable: bool, direction: Direction):
         """
         Args:
             direction (Direction): _description_
         """ 
         if step_acceptable:
             self.x_k = self.x_inner_iterates
-            self.lam_x_k = self.lam_x_inner_iterates
-            self.lam_g_k = self.lam_g_inner_iterates
+            self.lam_x_k = direction.lam_d_inner_iterates
+            self.lam_g_k = direction.lam_a_inner_iterates
