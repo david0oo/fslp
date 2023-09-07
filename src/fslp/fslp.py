@@ -205,6 +205,8 @@ class FSLP:
             self.feasibility_iterations()
 
             # ------------- Trust-region iterations ---------------------------
+            # Store previous trust-region radius
+            self.log.tr_radii.append(self.trust_region.tr_radius_k)
             if not self.kappa_acceptance:
                 step_accepted = False
                 if self.options.verbose:
@@ -241,7 +243,6 @@ class FSLP:
                 if self.options.verbose:
                     print('REJECTED')
 
-            self.log.tr_radii.append(self.trust_region.tr_radius_k)
             self.direction.prepare_subproblem_bounds_variables(self.trust_region, self.iterate, self.nlp_problem)
 
         # Max_iter reached or optimal solution found
