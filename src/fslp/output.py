@@ -25,9 +25,10 @@ class Output:
         """
         This is the algorithm header
         """
-        print("-------------------------------------")
-        print("           This is FSLP              ")
-        print("-------------------------------------")
+        print("--------------------------------------------------------------")
+        print("                        This is FSLP                          ")
+        print("               © MECO Research Team, KU Leuven                ")
+        print("--------------------------------------------------------------")
 
     def print_iteration_header(self):
         """ 
@@ -73,4 +74,23 @@ class Output:
                      feas_it=int(log.inner_iters[-1]),
                      tr_rad=float(log.tr_radii[-1]),
                      tr_ratio=float(tr.tr_ratio)))
+        
+    def print_feasibility_iterations_info(self,
+                                          kappa: float,
+                                          infeasibility: float,
+                                          asymptotic_exactness: float):
+        """
+        Print the inner iteration debug output.
+        """
+        # print("Kappa: ", kappa,
+        #       "Infeasibility", infeasibility,
+        #       "Asymptotic Exactness: ", asymptotic_exactness)
+        
+        print(("Kappa:{kappa:>10.6f}"
+              "    Infeasibility:{infeasibility:>15.5e}"
+              "    Asymptotic Exactness: {asymptotic_exactness:10.6f}").format(
+                  kappa=float(kappa),
+                  infeasibility=float(infeasibility),
+                  asymptotic_exactness=float(asymptotic_exactness)
+              ))
         

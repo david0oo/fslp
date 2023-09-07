@@ -99,7 +99,15 @@ class Options:
         if bool(opts) and 'verbose' in opts:
             self.verbose = opts['verbose']
         else:
-            self.verbose = True
+            self.verbose = True            
+
+        if bool(opts) and 'output_level' in opts:
+            self.output_level = opts['output_level']
+        else:
+            self.output_level = 2
+
+        if self.verbose:
+            self.output_level = 2
 
         if bool(opts) and 'solver_type' in opts:
             if not opts['solver_type'] in ['SLP', 'SQP']:

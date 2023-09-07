@@ -137,7 +137,7 @@ class FSLP:
         for i in range(self.options.max_iter):
             # Do the FSLP outer iterations here
             # print iteration here
-            if self.options.verbose:
+            if self.options.output_level >= 1:
                 self.output.print_output(i,
                                          self.iterate,
                                          self.direction,
@@ -186,7 +186,7 @@ class FSLP:
             self.direction.eval_m_k(self.iterate)
 
             if cs.fabs(self.direction.m_k) < self.options.optimality_tol:
-                if self.options.verbose:
+                if self.options.output_level >= 1:
                     print('Optimal Point Found? Linear model is {m_k:^10.4e}.'.format(m_k=float(self.direction.m_k)))
                 self.success = True
                 self.log.solver_success = True
@@ -198,10 +198,6 @@ class FSLP:
 
             self.direction.dk_inf_norm = cs.norm_inf(self.trust_region.tr_scale_mat_k @ self.direction.d_k)
             self.direction.previous_dk_inf_norm = self.direction.dk_inf_norm
-            # (self.x_k_correction,
-            #     self.lam_p_g_k,
-            #     self.lam_p_x_k,
-            #     self.feas_iter) = self.feasibility_iterations()
             self.feasibility_iterations()
 
             # ------------- Trust-region iterations ---------------------------
@@ -209,7 +205,7 @@ class FSLP:
             self.log.tr_radii.append(self.trust_region.tr_radius_k)
             if not self.kappa_acceptance:
                 step_accepted = False
-                if self.options.verbose:
+                if self.options.output_level == 2:
                     print('Rejected inner iterates or asymptotic exactness')
                 self.trust_region.tr_reduction(self.direction, self.options)
             else:
@@ -226,21 +222,17 @@ class FSLP:
                         self.nlp_problem.gradient_lagrangian_function(
                             self.iterate.x_k, self.iterate.p, cs.DM([1]), self.iterate.lam_g_k, self.iterate.lam_x_k))).squeeze())
                 self.log.list_iter.append(self.iterate.x_k)
-                if self.options.verbose:
+                if self.options.output_level == 2:
                     print('ACCEPTED')
                 self.iterate.evaluate_quantities(self.nlp_problem, self.log, self.options)
                 self.direction.prepare_subproblem_bounds_constraints(self.iterate, self.nlp_problem)
                 self.direction.prepare_subproblem_matrices(self.iterate, self.options)
                 
-                # self.__eval_grad_jac(step_accepted)
-                # self.__prepare_subproblem_matrices()
-                # self.__prepare_subproblem_bounds_constraints()
                 self.log.accepted_iterations_counter += 1
-                # self.__check_slacks_zero()
                 self.log.list_feas.append(self.iterate.infeasibility)
                 self.log.list_times.append(timer() - self.lasttime)
             else:
-                if self.options.verbose:
+                if self.options.output_level == 2:
                     print('REJECTED')
 
             self.direction.prepare_subproblem_bounds_variables(self.trust_region, self.iterate, self.nlp_problem)
@@ -317,13 +309,6 @@ class FSLP:
 
 
             # -------------- Prepare subproblem -------------------------------
-            # if self.gradient_correction:
-            #     grad_L_tmp = self.__eval_grad_lag(self.x_tmp, lam_p_g_tmp, lam_p_x_tmp)
-            #     print('Gradient of Lagrangian: ', cs.norm_inf(grad_L_tmp))
-            #     # Do the gradient correction, could also be + instead of -??
-            #     grad_f_correction = grad_L_tmp - self.A_k.T @ lam_p_g_tmp - lam_p_x_tmp
-            # else:
-            # Do just Zero-Order Iterations
             if self.options.use_sqp:
                 grad_f_correction = self.iterate.gradient_f_k + self.direction.H_k @ (self.iterate.x_inner_iterates - self.iterate.x_k)
             else:
@@ -374,13 +359,13 @@ class FSLP:
             kappa = self.direction.dk_inf_norm/self.direction.previous_dk_inf_norm
             kappas.append(kappa)
 
-
             as_exac = cs.norm_2(
                 self.direction.d_k - (self.iterate.x_inner_iterates - self.iterate.x_k)) / cs.norm_2(self.direction.d_k)
-            # if self.options.verbose:
+            
+            if self.options.output_level == 2:
+                self.output.print_feasibility_iterations_info(kappa, self.curr_infeas, as_exac)
                 # print("Kappa: ", kappa,
-                #       "Infeasibility", self.iterate.feasibility_measure(
-                #                 self.iterate.x_inner_iterates, self.g_tmp, self.nlp_problem),
+                #       "Infeasibility", self.curr_infeas,
                 #       "Asymptotic Exactness: ", as_exac)
 
             # +1 excludes the first iteration from the kappa test
@@ -388,8 +373,8 @@ class FSLP:
             if inner_iter % self.options.watchdog == 0:
                 kappa_watch = self.direction.dk_inf_norm/watchdog_prev_inf_norm
                 watchdog_prev_inf_norm = self.direction.dk_inf_norm
-                # if self.options.verbose:
-                    # print("kappa watchdog: ", kappa_watch)
+                if self.options.output_level == 2:
+                    print("kappa watchdog: ", kappa_watch)
                 if self.curr_infeas < self.options.feasibility_tol and as_exac < 0.5:
                     self.kappa_acceptance = True
                     break
