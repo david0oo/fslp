@@ -27,7 +27,7 @@ class Output:
         This is the algorithm header
         """
         print("--------------------------------------------------------------")
-        print("                        This is FSLP                          ")
+        print("                    This is FSLP / FP-SQP                     ")
         print("               © MECO Research Team, KU Leuven                ")
         print("--------------------------------------------------------------")
         if opts.use_anderson:
