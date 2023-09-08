@@ -129,6 +129,7 @@ opts['tr_alpha2'] = tr_alpha2
 opts['tr_tol'] = tr_tol
 opts['opt_check_slacks'] = True
 opts['n_slacks_start'] = 6
+opts['output_level'] = 1
 opts['n_slacks_end'] = 6
 
 opts_ipopt = {'print_time': True,
