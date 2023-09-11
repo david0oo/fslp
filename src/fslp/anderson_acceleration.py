@@ -22,7 +22,7 @@ class AndersonAcceleration:
         self.anderson_memory_step = cs.DM.zeros(problem.number_variables, self.max_memory_size)
         self.anderson_memory_iterate = cs.DM.zeros(problem.number_variables, self.max_memory_size)
 
-        self.curr_memory_size = 0
+        self.current_number_anderson_iterations = 0
 
     def init_memory(self, direction: cs.DM, iterate: cs.DM):
             """
@@ -35,7 +35,7 @@ class AndersonAcceleration:
             # self.anderson_memory_step = cs.DM.zeros(self.nx, self.max_memory_size)
             # self.anderson_memory_iterate = cs.DM.zeros(self.nx, self.max_memory_size)
 
-            self.curr_memory_size = 0
+            self.current_number_anderson_iterations = 1
 
             # Should be the same for any m
             self.anderson_memory_step[:, 0] = direction
@@ -48,12 +48,13 @@ class AndersonAcceleration:
         x       the iterate to be stored
 
         """
+        # Shift the memory one step further
         if self.max_memory_size != 1:
             self.anderson_memory_step[:,1:] = self.anderson_memory_step[:,0:-1]
             self.anderson_memory_iterate[:,1:] = self.anderson_memory_iterate[:,0:-1]
         
         # Increment the memory size
-        self.curr_memory_size += 1
+        self.current_number_anderson_iterations += 1
 
         # Is used for all updates
         self.anderson_memory_step[:, 0] = direction
@@ -72,7 +73,7 @@ class AndersonAcceleration:
             x_plus = current_iterate + self.beta*current_direction - gamma*(current_iterate-self.anderson_memory_iterate[:,0] + self.beta*current_direction - self.beta*self.anderson_memory_step[:,0])
             print("gamma k: ", gamma)
         else:
-            curr_stages = min(self.curr_memory_size, self.max_memory_size)
+            curr_stages = min(self.current_number_anderson_iterations, self.max_memory_size)
 
             p_stack = cs.horzcat(current_direction, self.anderson_memory_step[:, 0:curr_stages])
             x_stack = cs.horzcat(current_iterate, self.anderson_memory_iterate[:, 0:curr_stages])
@@ -87,7 +88,7 @@ class AndersonAcceleration:
             x_plus = current_iterate + self.beta*current_direction -(E_k + self.beta*F_k) @ gamma_k
         
         # Always update the memory in the end
-        self.update_memory(current_direction, current_direction)
+        self.update_memory(current_direction, current_iterate)
 
         return x_plus
     
