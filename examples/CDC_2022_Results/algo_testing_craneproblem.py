@@ -106,7 +106,7 @@ test_fslp = True
 opts = {}
 opts['subproblem_sol'] = 'cplex'
 opts['subproblem_sol_opts'] = {'verbose':False, 'tol':1e-9, 'qp_method':2, 'warm_start':True, 'dep_check':2, 'cplex':{'CPXPARAM_Simplex_Display':0, 'CPXPARAM_ScreenOutput':0}}
-max_iter = 200
+max_iter = 3
 max_inner_iter = 50
 contraction_acceptance = 0.3
 watchdog = 5
@@ -131,6 +131,7 @@ opts['tr_tol'] = tr_tol
 opts['opt_check_slacks'] = True
 opts['n_slacks_start'] = 6
 opts['n_slacks_end'] = 6
+opts['use_anderson'] = True
 # opts['gradient_correction'] = True
 
 opts_ipopt = {'print_time': True,

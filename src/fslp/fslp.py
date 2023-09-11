@@ -823,6 +823,7 @@ class FSLP_Method:
         if self.sz_anderson_memory == 1:
             gamma = (p_curr.T @ (p_curr-self.anderson_memory_step[:,0]))/((p_curr-self.anderson_memory_step[:,0]).T @ (p_curr-self.anderson_memory_step[:,0]))
             x_plus = x_curr + beta*p_curr - gamma*(x_curr-self.anderson_memory_iterate[:,0] + beta*p_curr - beta*self.anderson_memory_step[:,0])
+            print("gamma_k: ", gamma)
             # self.anderson_acc_update_memory(p_curr, x_curr)
         else:
             curr_stages = min(j, self.sz_anderson_memory)
