@@ -120,7 +120,7 @@ class Options:
             self.use_anderson = False
 
         if 'anderson_memory_size' in opts:
-            self.anderson_memory_size = opts['anderson_memory']
+            self.anderson_memory_size = opts['anderson_memory_size']
         else:
             self.anderson_memory_size = 1
 

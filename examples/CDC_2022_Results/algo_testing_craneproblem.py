@@ -132,6 +132,7 @@ opts['n_slacks_start'] = 6
 opts['output_level'] = 2
 opts['n_slacks_end'] = 6
 opts['use_anderson'] = True
+opts['anderson_memory_size'] = 7
 
 opts_ipopt = {'print_time': True,
               'ipopt': {'print_level':0, 'sb':'yes',
@@ -179,6 +180,8 @@ for i in range(len(start_list_tuples)):
             
             feasible_solver = fslp.FSLP(problem_dict, opts)
             x_sol, f_sol, lam_g_sol, lam_x_sol = feasible_solver(init_dict)
+
+            print("Number of feasibility iterations: ", feasible_solver.log.feasibility_iteration_counter)
 
             stats_fpsqp = store_stats_fpsqp(feasible_solver, f_sol, x_sol)
             problem_stats_fpsqp.append(stats_fpsqp)
