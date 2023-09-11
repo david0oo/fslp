@@ -71,7 +71,7 @@ class AndersonAcceleration:
         if self.max_memory_size == 1:
             gamma = (current_direction.T @ (current_direction-self.anderson_memory_step[:,0]))/((current_direction-self.anderson_memory_step[:,0]).T @ (current_direction-self.anderson_memory_step[:,0]))
             x_plus = current_iterate + self.beta*current_direction - gamma*(current_iterate-self.anderson_memory_iterate[:,0] + self.beta*current_direction - self.beta*self.anderson_memory_step[:,0])
-            print("gamma k: ", gamma)
+            # print("gamma k: ", gamma)
         else:
             curr_stages = min(self.current_number_anderson_iterations, self.max_memory_size)
 
@@ -84,7 +84,7 @@ class AndersonAcceleration:
 
             pinv_Fk = np.linalg.pinv(F_k)
             gamma_k = pinv_Fk @ current_direction
-            print("gamma k: ", gamma_k)
+            # print("gamma k: ", gamma_k)
             x_plus = current_iterate + self.beta*current_direction -(E_k + self.beta*F_k) @ gamma_k
         
         # Always update the memory in the end

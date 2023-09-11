@@ -108,7 +108,7 @@ class FSLP:
 
         # self.__create_subproblem_solver()
 
-        self.log.feasibility_iteration_counter = -1
+        self.log.feasibility_iteration_counter = 0
         self.log.inner_iters.append(-1)
         self.direction.m_k = -1
         self.direction.d_k = cs.DM.zeros(self.nlp_problem.number_variables)
