@@ -14,6 +14,7 @@ from fslp.iterate import Iterate
 from fslp.direction import Direction
 from fslp.trustRegion import TrustRegion
 from fslp.subproblem import Subproblem
+from fslp.anderson_acceleration import AndersonAcceleration
 
 cs.DM.set_precision(16)
 
@@ -33,17 +34,13 @@ class FSLP:
         self.output = Output()
 
         # use options to initialize everything properly
-
-        # self.inner_direction = Direction(self.nlp_problem, self.options)
         self.direction = Direction(self.nlp_problem, self.options)
-
         self.iterate = Iterate(self.nlp_problem)
 
         self.trust_region = TrustRegion(self.options)
         self.subproblem = Subproblem(self.nlp_problem, self.options, self.iterate)
 
-        # self.subproblem_solver = None
-        # self.solver_type = 'SLP'
+        self.anderson_acceleration = AndersonAcceleration(self.nlp_problem, self.options)
 
     def __call__(self, init_dict: dict):
         """
@@ -349,7 +346,7 @@ class FSLP:
 
 
             if self.options.use_anderson:
-                self.iterate.x_inner_iterates = self.anderson_acceleration.step_update(self.direction.d_inner_iterates, self.iterate.x_inner_iterates, j+1)
+                self.iterate.x_inner_iterates = self.anderson_acceleration.step_update(self.direction.d_inner_iterates, self.iterate.x_inner_iterates)
             else:
                 self.iterate.x_inner_iterates = self.iterate.x_inner_iterates + self.direction.d_inner_iterates
             self.g_tmp = self.nlp_problem.eval_g(self.iterate.x_inner_iterates,self.iterate.p, self.log)  # x_tmp = x_{tmp-1} + p_tmp
