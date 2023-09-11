@@ -132,6 +132,7 @@ opts['opt_check_slacks'] = True
 opts['n_slacks_start'] = 6
 opts['n_slacks_end'] = 6
 opts['use_anderson'] = True
+opts['anderson_memory'] = 2
 # opts['gradient_correction'] = True
 
 opts_ipopt = {'print_time': True,

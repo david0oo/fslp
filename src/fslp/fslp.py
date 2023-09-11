@@ -838,6 +838,7 @@ class FSLP_Method:
 
             pinv_Fk = np.linalg.pinv(F_k)
             gamma_k = pinv_Fk @ p_curr
+            print("gamma_k: ", gamma_k)
             x_plus = x_curr + beta*p_curr -(E_k + beta*F_k) @ gamma_k
             
         self.anderson_acc_update_memory(p_curr, x_curr)
