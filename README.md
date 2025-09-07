@@ -97,6 +97,25 @@ The algorithm is described in:
 David Kiessling, Andrea Zanelli, Armin Nurkanović, Joris Gillis, Moritz Diehl, Melanie Zeilinger, Goele Pipeleers, Jan Swevers
 published in the Proceedings of the 61st IEEE Conference on Decision and Control
 
+## Citing
+```
+@InProceedings{Kiessling2022,
+  Title                    = {A Feasible Sequential Linear Programming Algorithm with Application to Time-Optimal Path Planning Problems},
+  Author                   = {Kiessling, D. and Zanelli, A. and Nurkanovi\'c, A. and Gillis, J. and Diehl, M. and Zeilinger, M. and Pipeleers, G. and Swevers, J.},
+  Booktitle                = {Proceedings of 61st IEEE Conference on Decision and Control},
+  Year                     = {2022},
+  Address                  = {Cancun, Mexico},
+  Month                    = {December},
+}
+
+@InProceedings{Kiessling2023,
+  Title                    = {Anderson Accelerated Feasible Sequential Linear Programming},
+  Author                   = {Kiessling, D. and Pas, P. and Astudillo, A. and Patrinos, P. and Swevers, J.},
+  Booktitle                = {Proceedings of the IFAC World Congress},
+  Year                     = {2023},
+  Address                  = {Yokohama, Japan},
+}
+```
 ## Contact
 For questions, remarks, bugs please send an email to: [david.kiessling@kuleuven.be](david.kiessling@kuleuven.be)
 
